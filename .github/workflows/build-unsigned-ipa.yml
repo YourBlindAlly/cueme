@@ -38,6 +38,15 @@ jobs:
       - name: Prebuild native iOS project
         run: npx expo prebuild --platform ios --non-interactive
 
+      - name: DIAGNOSTIC - dump real GCKeyCode member names
+        run: |
+          sdk=$(xcrun --sdk iphoneos --show-sdk-path)
+          echo "SDK: $sdk"
+          find "$sdk/System/Library/Frameworks/GameController.framework" -type f | sort
+          echo "--- swiftinterface grep ---"
+          find "$sdk/System/Library/Frameworks/GameController.framework" -name "*.swiftinterface" \
+            -exec grep -n "keyCode\|GCKeyCode\|static let key\|static var key" {} \;
+
       - name: Find workspace and scheme
         id: find
         run: |
