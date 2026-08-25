@@ -41,11 +41,9 @@ jobs:
       - name: DIAGNOSTIC - dump real GCKeyCode member names
         run: |
           sdk=$(xcrun --sdk iphoneos --show-sdk-path)
-          echo "SDK: $sdk"
-          find "$sdk/System/Library/Frameworks/GameController.framework" -type f | sort
-          echo "--- swiftinterface grep ---"
-          find "$sdk/System/Library/Frameworks/GameController.framework" -name "*.swiftinterface" \
-            -exec grep -n "keyCode\|GCKeyCode\|static let key\|static var key" {} \;
+          hdr="$sdk/System/Library/Frameworks/GameController.framework/Headers/GCKeyCodes.h"
+          echo "--- $hdr ---"
+          grep -iE "arrow|space|page|tab|escape|return|enter|home|\bend\b" "$hdr"
 
       - name: Find workspace and scheme
         id: find
