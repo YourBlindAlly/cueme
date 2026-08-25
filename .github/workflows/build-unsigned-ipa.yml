@@ -1,0 +1,73 @@
+name: Build unsigned iOS ipa
+
+# Produces an unsigned .ipa for sideloading via SideStore, which applies its
+# own free-Apple-ID signature at install time. EAS Build's own iOS device
+# signing requires a paid Apple Developer Program account; this workflow
+# sidesteps that entirely by turning the project into a plain Xcode project
+# (expo prebuild) and archiving it with code signing turned off, on GitHub's
+# macOS runners (free for public repos) since none of us has a local Mac.
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch: {}
+
+env:
+  CI: true
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Install JS dependencies
+        run: npm ci
+
+      - name: Prebuild native iOS project
+        run: npx expo prebuild --platform ios --non-interactive
+
+      - name: Find workspace and scheme
+        id: find
+        run: |
+          workspace=$(find ios -maxdepth 1 -name "*.xcworkspace" | head -n1)
+          scheme=$(xcodebuild -list -workspace "$workspace" -json | \
+            node -e "const d=JSON.parse(require('fs').readFileSync(0,'utf8')); console.log(d.workspace.schemes[0]);")
+          echo "workspace=$workspace" >> "$GITHUB_OUTPUT"
+          echo "scheme=$scheme" >> "$GITHUB_OUTPUT"
+          echo "Found workspace: $workspace, scheme: $scheme"
+
+      - name: Archive (code signing disabled)
+        run: |
+          xcodebuild archive \
+            -workspace "${{ steps.find.outputs.workspace }}" \
+            -scheme "${{ steps.find.outputs.scheme }}" \
+            -configuration Release \
+            -destination "generic/platform=iOS" \
+            -archivePath build/CueMe.xcarchive \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO
+
+      - name: Package unsigned ipa
+        run: |
+          app_path=$(find build/CueMe.xcarchive/Products/Applications -maxdepth 1 -name "*.app" | head -n1)
+          mkdir -p Payload
+          cp -r "$app_path" Payload/
+          zip -r CueMe-unsigned.ipa Payload
+          echo "Built: $(ls -la CueMe-unsigned.ipa)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: CueMe-unsigned-ipa
+          path: CueMe-unsigned.ipa
+          retention-days: 30
