@@ -109,18 +109,18 @@ public class CuemePedalInputModule: Module {
   /// raw code — since pedal models vary in exactly which key they emulate.
   private static func keyName(for keyCode: GCKeyCode) -> String {
     switch keyCode {
-    case .keyboardRightArrow: return "Right Arrow"
-    case .keyboardLeftArrow: return "Left Arrow"
-    case .keyboardUpArrow: return "Up Arrow"
-    case .keyboardDownArrow: return "Down Arrow"
-    case .keyboardPageUp: return "Page Up"
-    case .keyboardPageDown: return "Page Down"
-    case .keyboardSpacebar: return "Spacebar"
-    case .keyboardTab: return "Tab"
-    case .keyboardReturnOrEnter: return "Enter"
-    case .keyboardEscape: return "Escape"
-    case .keyboardHome: return "Home"
-    case .keyboardEnd: return "End"
+    case .rightArrow: return "Right Arrow"
+    case .leftArrow: return "Left Arrow"
+    case .upArrow: return "Up Arrow"
+    case .downArrow: return "Down Arrow"
+    case .pageUp: return "Page Up"
+    case .pageDown: return "Page Down"
+    case .spacebar: return "Spacebar"
+    case .tab: return "Tab"
+    case .returnOrEnter: return "Enter"
+    case .escape: return "Escape"
+    case .home: return "Home"
+    case .end: return "End"
     default: return "Key \(keyCode.rawValue)"
     }
   }

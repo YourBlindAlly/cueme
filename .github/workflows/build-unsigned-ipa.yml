@@ -38,13 +38,6 @@ jobs:
       - name: Prebuild native iOS project
         run: npx expo prebuild --platform ios --non-interactive
 
-      - name: DIAGNOSTIC - dump real GCKeyCode member names
-        run: |
-          sdk=$(xcrun --sdk iphoneos --show-sdk-path)
-          hdr="$sdk/System/Library/Frameworks/GameController.framework/Headers/GCKeyCodes.h"
-          echo "--- $hdr ---"
-          grep -iE "arrow|space|page|tab|escape|return|enter|home|\bend\b" "$hdr"
-
       - name: Find workspace and scheme
         id: find
         run: |
