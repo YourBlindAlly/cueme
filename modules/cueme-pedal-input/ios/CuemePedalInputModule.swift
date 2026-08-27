@@ -14,6 +14,11 @@ import AVFoundation
 /// just when a text field is focused — and so it can detect the pedal
 /// connecting/disconnecting, which UIKit's UIKeyCommand APIs don't expose.
 public class CuemePedalInputModule: Module {
+  /// Weak reference used by PedalKeyCaptureView to reach this module's
+  /// sendEvent — simpler and more robust than looking the module instance
+  /// back up through Expo's module registry from the view.
+  static weak var current: CuemePedalInputModule?
+
   private var connectObserver: NSObjectProtocol?
   private var disconnectObserver: NSObjectProtocol?
   private var interruptionObserver: NSObjectProtocol?
@@ -21,7 +26,13 @@ public class CuemePedalInputModule: Module {
   public func definition() -> ModuleDefinition {
     Name("CuemePedalInput")
 
+    OnCreate {
+      CuemePedalInputModule.current = self
+    }
+
     Events("onPedalConnected", "onPedalDisconnected", "onKeyEvent", "onAudioInterruptionEnded")
+
+    View(PedalKeyCaptureView.self) { }
 
     OnStartObserving {
       self.attachKeyHandler(to: GCKeyboard.coalesced?.keyboardInput)
@@ -100,6 +111,18 @@ public class CuemePedalInputModule: Module {
       self.attachKeyHandler(to: keyboard?.keyboardInput)
       return keyboard != nil
     }
+  }
+
+  /// Called by PedalKeyCaptureView's pressesBegan/pressesEnded — the fallback
+  /// key-delivery path that actually works for the pedal this was written
+  /// against, unlike GCKeyboard's keyChangedHandler below.
+  func emitKeyEvent(keyCode: Int, keyName: String, isKeyDown: Bool) {
+    let body: [String: Any?] = [
+      "keyCode": keyCode,
+      "keyName": keyName,
+      "isKeyDown": isKeyDown,
+    ]
+    sendEvent("onKeyEvent", body)
   }
 
   private func attachKeyHandler(to keyboardInput: GCKeyboardInput?) {

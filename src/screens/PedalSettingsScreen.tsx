@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import * as Speech from 'expo-speech';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -37,19 +37,6 @@ export function PedalSettingsScreen({ navigation }: Props) {
   });
 
   const [capturingAction, setCapturingAction] = React.useState<PedalAction | null>(null);
-  const captureInputRef = useRef<TextInput>(null);
-
-  // Gives a real iOS text-editing focus context to the capture flow. Confirmed
-  // on the web version of this same pedal (Pedal Timing Tester) that VoiceOver
-  // treats a focused text field differently from a plain button for letting
-  // hardware key events through — worth trying here too even though the
-  // native GCKeyboard bridge is supposed to bypass VoiceOver's interception
-  // entirely, since that assumption is exactly what's unconfirmed.
-  useEffect(() => {
-    if (isCapturing) {
-      captureInputRef.current?.focus();
-    }
-  }, [isCapturing]);
 
   const handleAssign = async (action: PedalAction) => {
     setCapturingAction(action);
@@ -96,13 +83,6 @@ export function PedalSettingsScreen({ navigation }: Props) {
           {isCapturing && capturingAction === action ? (
             <View style={styles.captureRow}>
               <Text style={styles.capturingText}>Waiting for a press…</Text>
-              <TextInput
-                ref={captureInputRef}
-                style={styles.captureInput}
-                accessibilityLabel="Press the pedal now"
-                value=""
-                onChangeText={() => {}}
-              />
               <Pressable
                 onPress={handleCancelCapture}
                 accessibilityRole="button"
@@ -206,16 +186,6 @@ const styles = StyleSheet.create({
   cancelLink: {
     color: '#ff6b6b',
     fontSize: 15,
-  },
-  captureInput: {
-    backgroundColor: '#000',
-    borderWidth: 1,
-    borderColor: '#4f8cff',
-    borderRadius: 6,
-    color: '#fff',
-    paddingVertical: 6,
-    paddingHorizontal: 10,
-    width: 90,
   },
   toggleRow: {
     flexDirection: 'row',

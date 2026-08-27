@@ -11,6 +11,7 @@ import { PedalSettingsScreen } from './src/screens/PedalSettingsScreen';
 import { VoiceSettingsScreen } from './src/screens/VoiceSettingsScreen';
 import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
+import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
 import { configureAudioSession } from './src/feedback/feedback';
 import { loadActiveSong } from './src/storage/activeSong';
 import type { RootStackParamList } from './src/navigation/types';
@@ -75,6 +76,7 @@ export default function App() {
           </Stack.Navigator>
         </NavigationContainer>
       </AppStateProvider>
+      <CuemePedalCaptureView />
       <StatusBar style="light" />
     </GestureHandlerRootView>
   );
