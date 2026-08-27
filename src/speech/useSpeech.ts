@@ -19,25 +19,45 @@ export function useSpeech() {
   }, []);
 
   /**
+   * Re-reads the voice preference from storage. Needed because a screen
+   * doesn't remount when you navigate back to it (React Navigation keeps the
+   * existing instance), so a voice picked in Settings would otherwise never
+   * reach an already-mounted prompter screen's speech hook.
+   */
+  const refreshVoicePreference = useCallback(async () => {
+    voiceIdRef.current = await loadVoicePreference();
+  }, []);
+
+  /**
    * Stops whatever is currently being spoken (if anything) and immediately
    * starts speaking `text` — this is the "cut off and jump" behavior the
    * pedal's forward press needs, not a queued/sequential speak.
+   *
+   * Speech.stop() is asynchronous even though it looks like a fire-and-forget
+   * call. Calling speak() right after it without awaiting let the old
+   * utterance's stop and the new utterance's start land out of order, which
+   * could cut the new line off partway through shortly after it started —
+   * found via real on-device testing where lines were "fading away" before
+   * finishing.
    */
   const speakNow = useCallback((text: string) => {
-    Speech.stop();
-    setIsSpeaking(true);
-    Speech.speak(text, {
-      voice: voiceIdRef.current ?? undefined,
-      onDone: () => {
-        if (mounted.current) setIsSpeaking(false);
-      },
-      onStopped: () => {
-        if (mounted.current) setIsSpeaking(false);
-      },
-      onError: () => {
-        if (mounted.current) setIsSpeaking(false);
-      },
-    });
+    (async () => {
+      await Speech.stop();
+      if (!mounted.current) return;
+      setIsSpeaking(true);
+      Speech.speak(text, {
+        voice: voiceIdRef.current ?? undefined,
+        onDone: () => {
+          if (mounted.current) setIsSpeaking(false);
+        },
+        onStopped: () => {
+          if (mounted.current) setIsSpeaking(false);
+        },
+        onError: () => {
+          if (mounted.current) setIsSpeaking(false);
+        },
+      });
+    })();
   }, []);
 
   const stopImmediate = useCallback(() => {
@@ -45,5 +65,5 @@ export function useSpeech() {
     setIsSpeaking(false);
   }, []);
 
-  return { isSpeaking, speakNow, stopImmediate };
+  return { isSpeaking, speakNow, stopImmediate, refreshVoicePreference };
 }

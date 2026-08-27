@@ -32,13 +32,25 @@ export function PromptScreen({ navigation }: Props) {
   // screen unmounts before the (async, web-only) Wake Lock activation settles.
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   const { activeSong: song } = useAppState();
-  const { speakNow, stopImmediate } = useSpeech();
+  const { speakNow, stopImmediate, refreshVoicePreference } = useSpeech();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
 
   useEffect(() => {
     loadReduceVoiceOverChatter().then(setReduceChatter);
   }, []);
+
+  // React Navigation reuses this screen's instance on goBack() rather than
+  // remounting it, so settings changed on VoiceSettings/PedalSettings (voice,
+  // reduce-VO-chatter) would otherwise never reach an already-mounted
+  // PromptScreen until the app fully restarted.
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      refreshVoicePreference();
+      loadReduceVoiceOverChatter().then(setReduceChatter);
+    });
+    return unsubscribe;
+  }, [navigation, refreshVoicePreference]);
 
   useEffect(() => {
     if (!song) {
@@ -129,40 +141,36 @@ export function PromptScreen({ navigation }: Props) {
           {song.title}
         </Text>
         <View style={styles.headerLinks}>
-          <Text
-            style={styles.exitLink}
+          <Pressable
             accessibilityRole="button"
             accessibilityLabel={
               isPedalConnected ? 'Pedal connected. Open pedal settings' : 'Open pedal settings'
             }
             onPress={() => navigation.navigate('PedalSettings')}
           >
-            {isPedalConnected ? 'Pedal ●' : 'Controls'}
-          </Text>
-          <Text
-            style={styles.exitLink}
+            <Text style={styles.exitLink}>{isPedalConnected ? 'Pedal ●' : 'Controls'}</Text>
+          </Pressable>
+          <Pressable
             accessibilityRole="button"
             accessibilityLabel="Open voice settings"
             onPress={() => navigation.navigate('VoiceSettings')}
           >
-            Voice
-          </Text>
-          <Text
-            style={styles.exitLink}
+            <Text style={styles.exitLink}>Voice</Text>
+          </Pressable>
+          <Pressable
             accessibilityRole="button"
             accessibilityLabel="Edit this song's lyrics"
             onPress={() => navigation.navigate('NewSong', { editSong: song })}
           >
-            Edit
-          </Text>
-          <Text
-            style={styles.exitLink}
+            <Text style={styles.exitLink}>Edit</Text>
+          </Pressable>
+          <Pressable
             accessibilityRole="button"
             accessibilityLabel="Load a different song"
             onPress={() => navigation.navigate('Library')}
           >
-            Library
-          </Text>
+            <Text style={styles.exitLink}>Library</Text>
+          </Pressable>
         </View>
       </View>
 
