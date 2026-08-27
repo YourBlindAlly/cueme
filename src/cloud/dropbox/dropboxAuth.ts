@@ -44,7 +44,10 @@ export function useDropboxAuth() {
     })();
   }, []);
 
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme' });
+  // A bare `cueme://` has no authority/path component, which Dropbox's own
+  // redirect URI validator rejects ("You must provide a proper URI with an
+  // authority or path component") — adding a path segment satisfies it.
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme', path: 'redirect' });
 
   const [request, , promptAsync] = AuthSession.useAuthRequest(
     {

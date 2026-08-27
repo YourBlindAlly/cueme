@@ -17,7 +17,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   const [entries, setEntries] = useState<DropboxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
-  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme' });
+  const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme', path: 'redirect' });
 
   useEffect(() => {
     if (!isConnected) {
