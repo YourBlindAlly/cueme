@@ -1,4 +1,7 @@
 import { getValidDropboxAccessToken } from './dropboxAuth';
+import { CHORDPRO_EXTENSIONS } from '../../parsing/buildSong';
+
+const SONG_EXTENSIONS = ['.txt', ...CHORDPRO_EXTENSIONS];
 
 export type DropboxEntry = {
   name: string;
@@ -22,7 +25,7 @@ async function authorizedFetch(url: string, init: RequestInit): Promise<Response
   return res;
 }
 
-/** Lists folders and .txt files at `path` ('' for the root). */
+/** Lists folders and recognized song files (.txt, ChordPro) at `path` ('' for the root). */
 export async function listDropboxFolder(path: string): Promise<DropboxEntry[]> {
   const res = await authorizedFetch('https://api.dropboxapi.com/2/files/list_folder', {
     method: 'POST',
@@ -33,7 +36,11 @@ export async function listDropboxFolder(path: string): Promise<DropboxEntry[]> {
     entries: { '.tag': string; name: string; path_lower: string }[];
   };
   return data.entries
-    .filter((e) => e['.tag'] === 'folder' || e.name.toLowerCase().endsWith('.txt'))
+    .filter(
+      (e) =>
+        e['.tag'] === 'folder' ||
+        SONG_EXTENSIONS.some((ext) => e.name.toLowerCase().endsWith(ext))
+    )
     .map((e) => ({ name: e.name, path: e.path_lower, isFolder: e['.tag'] === 'folder' }))
     .sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;

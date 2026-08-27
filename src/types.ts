@@ -12,6 +12,8 @@ export type SongSource =
 export type Song = {
   id: string;
   title: string;
+  /** Musical key, when known (e.g. from a ChordPro file's {key: C} directive). */
+  key?: string;
   /** Original pasted/imported text, kept so re-parsing or re-editing is lossless. */
   rawText: string;
   /** Spoken lines, with section-marker lines already stripped out. */

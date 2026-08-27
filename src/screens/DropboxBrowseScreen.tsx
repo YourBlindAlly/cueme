@@ -6,7 +6,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { isDropboxConfigured, useDropboxAuth } from '../cloud/dropbox/dropboxAuth';
 import { downloadDropboxFile, listDropboxFolder, type DropboxEntry } from '../cloud/dropbox/dropboxApi';
-import { buildSong } from '../parsing/buildSong';
+import { buildSongFromFile } from '../parsing/buildSong';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DropboxBrowse'>;
 
@@ -45,8 +45,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
     setIsDownloading(true);
     try {
       const text = await downloadDropboxFile(entry.path);
-      const title = entry.name.replace(/\.txt$/i, '');
-      const song = buildSong(text, title, { type: 'dropbox', path: entry.path });
+      const song = buildSongFromFile(text, entry.name, { type: 'dropbox', path: entry.path });
       if (!song) {
         Alert.alert('Empty file', `"${entry.name}" doesn't have any lyric lines in it.`);
         return;

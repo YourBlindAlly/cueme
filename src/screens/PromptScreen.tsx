@@ -139,6 +139,7 @@ export function PromptScreen({ navigation }: Props) {
       <View style={styles.header}>
         <Text style={styles.songTitle} numberOfLines={1}>
           {song.title}
+          {song.key ? ` — Key of ${song.key}` : ''}
         </Text>
         <View style={styles.headerLinks}>
           <Pressable
