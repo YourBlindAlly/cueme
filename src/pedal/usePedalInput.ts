@@ -14,9 +14,11 @@ type Options = {
   onAction?: (action: PedalAction) => void;
   /** Called when the pedal disconnects, if the disconnect-alert setting is on. */
   onDisconnectAlert?: () => void;
+  /** Called when the pedal (re)connects. */
+  onConnectAlert?: () => void;
 };
 
-export function usePedalInput({ onAction, onDisconnectAlert }: Options = {}) {
+export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: Options = {}) {
   const [isPedalConnected, setIsPedalConnected] = useState(false);
   const [bindings, setBindingsState] = useState<KeyBinding[]>([]);
   const [alertOnDisconnect, setAlertOnDisconnectState] = useState(true);
@@ -29,6 +31,8 @@ export function usePedalInput({ onAction, onDisconnectAlert }: Options = {}) {
   onActionRef.current = onAction;
   const onDisconnectAlertRef = useRef(onDisconnectAlert);
   onDisconnectAlertRef.current = onDisconnectAlert;
+  const onConnectAlertRef = useRef(onConnectAlert);
+  onConnectAlertRef.current = onConnectAlert;
   const alertOnDisconnectRef = useRef(alertOnDisconnect);
   alertOnDisconnectRef.current = alertOnDisconnect;
 
@@ -44,6 +48,7 @@ export function usePedalInput({ onAction, onDisconnectAlert }: Options = {}) {
     const subs = [
       CuemePedalInput.addListener('onPedalConnected', () => {
         setIsPedalConnected(true);
+        onConnectAlertRef.current?.();
       }),
       CuemePedalInput.addListener('onPedalDisconnected', () => {
         setIsPedalConnected(false);

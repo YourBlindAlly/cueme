@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useKeepAwake } from 'expo-keep-awake';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -14,16 +14,18 @@ import { usePedalInput } from '../pedal/usePedalInput';
 type Props = NativeStackScreenProps<RootStackParamList, 'Prompt'>;
 
 // accessibilityTraits isn't in React Native's public TypeScript ViewProps,
-// but these are real, native-supported trait strings (see
-// accessibilityPropsConversions.h): "allowsDirectInteraction" maps to
-// UIAccessibilityTraitAllowsDirectInteraction (pass raw touches straight
-// through instead of VoiceOver intercepting them), and "startsMedia" maps to
+// but this is a real, native-supported trait string (see
+// accessibilityPropsConversions.h): "startsMedia" maps to
 // UIAccessibilityTraitStartsMediaSession (tells VoiceOver an audio session is
 // active so it backs off its own ambient speech without disabling touch).
+// (allowsDirectInteraction was tried for swipe gestures on the touch strip,
+// but on-device testing showed VoiceOver still claims one-finger swipes for
+// its own navigation regardless of that trait — the strip uses plain
+// tap-to-activate buttons now instead, which is VoiceOver's standard,
+// reliable interaction model.)
 function accessibilityTraitsProp(traits: string[]) {
   return { accessibilityTraits: traits } as unknown as { accessibilityTraits: never };
 }
-const directInteractionProps = accessibilityTraitsProp(['allowsDirectInteraction']);
 
 export function PromptScreen({ navigation }: Props) {
   // suppressDeactivateWarnings avoids a benign unhandled-rejection when the
@@ -82,6 +84,9 @@ export function PromptScreen({ navigation }: Props) {
     onDisconnectAlert: () => {
       speakNow('Pedal disconnected. Using swipe.');
     },
+    onConnectAlert: () => {
+      speakNow('Pedal connected.');
+    },
   });
 
   const resumeCurrentLine = useCallback(() => {
@@ -98,14 +103,6 @@ export function PromptScreen({ navigation }: Props) {
     .direction(Directions.RIGHT)
     .onEnd(() => goPrevious());
   const screenSwipe = Gesture.Race(flingLeft, flingRight);
-
-  const stripFlingLeft = Gesture.Fling()
-    .direction(Directions.LEFT)
-    .onEnd(() => goNext());
-  const stripFlingRight = Gesture.Fling()
-    .direction(Directions.RIGHT)
-    .onEnd(() => goPrevious());
-  const stripSwipe = Gesture.Race(stripFlingLeft, stripFlingRight);
 
   if (!song) {
     return <View style={styles.container} />;
@@ -169,15 +166,25 @@ export function PromptScreen({ navigation }: Props) {
         </View>
       </GestureDetector>
 
-      <Text style={styles.stripCaption}>Swipe zone — forward / back</Text>
-      <GestureDetector gesture={stripSwipe}>
-        <View
-          style={styles.touchStrip}
-          accessible
-          accessibilityLabel="Swipe zone, forward or back"
-          {...directInteractionProps}
-        />
-      </GestureDetector>
+      <View style={styles.touchStrip}>
+        <Pressable
+          style={styles.touchStripHalf}
+          onPress={goPrevious}
+          accessibilityRole="button"
+          accessibilityLabel="Previous line"
+        >
+          <Text style={styles.touchStripLabel}>‹ Previous</Text>
+        </Pressable>
+        <View style={styles.touchStripDivider} />
+        <Pressable
+          style={styles.touchStripHalf}
+          onPress={goNext}
+          accessibilityRole="button"
+          accessibilityLabel="Next line"
+        >
+          <Text style={styles.touchStripLabel}>Next ›</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -224,16 +231,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     marginTop: 24,
   },
-  stripCaption: {
-    color: '#555',
-    fontSize: 12,
-    textAlign: 'center',
-    marginBottom: 4,
-  },
   touchStrip: {
+    flexDirection: 'row',
     height: 90,
     backgroundColor: '#111',
     borderTopWidth: 1,
     borderTopColor: '#222',
+  },
+  touchStripHalf: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  touchStripDivider: {
+    width: 1,
+    backgroundColor: '#222',
+  },
+  touchStripLabel: {
+    color: '#4f8cff',
+    fontSize: 20,
+    fontWeight: '700',
   },
 });
