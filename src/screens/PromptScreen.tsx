@@ -33,7 +33,7 @@ export function PromptScreen({ navigation }: Props) {
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   const { activeSong: song } = useAppState();
   const { speakNow, stopImmediate } = useSpeech();
-  const [currentIndex, setCurrentIndex] = useState(-1);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
 
   useEffect(() => {
@@ -45,6 +45,17 @@ export function PromptScreen({ navigation }: Props) {
       navigation.replace('Library');
     }
   }, [song, navigation]);
+
+  // Speak the first line immediately on load — no "ready, press next" step,
+  // since that state relied on a swipe prompt VoiceOver users couldn't act on
+  // anyway, and there's no real reason to make everyone wait through it.
+  useEffect(() => {
+    if (song && song.lines.length > 0) {
+      playAdvanceFeedback();
+      speakNow(song.lines[0]);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     return () => stopImmediate();
@@ -64,7 +75,7 @@ export function PromptScreen({ navigation }: Props) {
   }, [currentIndex, song, speakNow, stopImmediate]);
 
   const goPrevious = useCallback(() => {
-    if (!song || currentIndex < 0) {
+    if (!song) {
       return;
     }
     const prevIndex = Math.max(0, currentIndex - 1);
@@ -82,7 +93,7 @@ export function PromptScreen({ navigation }: Props) {
       }
     },
     onDisconnectAlert: () => {
-      speakNow('Pedal disconnected. Using swipe.');
+      speakNow('Pedal disconnected. Using on-screen buttons.');
     },
     onConnectAlert: () => {
       speakNow('Pedal connected.');
@@ -90,7 +101,7 @@ export function PromptScreen({ navigation }: Props) {
   });
 
   const resumeCurrentLine = useCallback(() => {
-    if (song && currentIndex >= 0) {
+    if (song) {
       speakNow(song.lines[currentIndex]);
     }
   }, [currentIndex, song, speakNow]);
@@ -108,9 +119,8 @@ export function PromptScreen({ navigation }: Props) {
     return <View style={styles.container} />;
   }
 
-  const displayText =
-    currentIndex < 0 ? 'Ready — swipe forward to begin' : song.lines[currentIndex];
-  const isEnded = currentIndex >= 0 && currentIndex === song.lines.length - 1;
+  const displayText = song.lines[currentIndex];
+  const isEnded = currentIndex === song.lines.length - 1;
 
   return (
     <View style={styles.container}>
