@@ -10,7 +10,7 @@
  * instead of attempting to start — everything else in the app works fine
  * without it.
  */
-export const DROPBOX_APP_KEY = '';
+export const DROPBOX_APP_KEY = '0iibd4asi022p7w';
 
 export const DROPBOX_DISCOVERY = {
   authorizationEndpoint: 'https://www.dropbox.com/oauth2/authorize',
