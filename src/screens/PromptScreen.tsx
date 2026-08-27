@@ -8,7 +8,11 @@ import { useAppState } from '../state/AppStateContext';
 import { useSpeech } from '../speech/useSpeech';
 import { useAudioInterruptionResume } from '../speech/useAudioInterruptionResume';
 import { loadReduceVoiceOverChatter } from '../speech/voiceOverPreference';
-import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
+import {
+  playAdvanceFeedback,
+  playEndOfSongFeedback,
+  playInterruptionResumeFeedback,
+} from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Prompt'>;
@@ -114,6 +118,7 @@ export function PromptScreen({ navigation }: Props) {
 
   const resumeCurrentLine = useCallback(() => {
     if (song) {
+      playInterruptionResumeFeedback();
       speakNow(song.lines[currentIndex]);
     }
   }, [currentIndex, song, speakNow]);
