@@ -1,6 +1,5 @@
-import React, { useRef, useState } from 'react';
+import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
-import * as Speech from 'expo-speech';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { usePedalInput } from '../pedal/usePedalInput';
@@ -15,8 +14,6 @@ const ACTION_LABELS: Record<PedalAction, string> = {
 
 export function PedalSettingsScreen({ navigation }: Props) {
   const onBack = () => navigation.goBack();
-  const [rawKeyLog, setRawKeyLog] = useState<string | null>(null);
-  const rawKeyCount = useRef(0);
 
   const {
     isPedalConnected,
@@ -27,14 +24,7 @@ export function PedalSettingsScreen({ navigation }: Props) {
     cancelCapture,
     alertOnDisconnect,
     setAlertOnDisconnect,
-  } = usePedalInput({
-    onRawKey: (event) => {
-      rawKeyCount.current += 1;
-      const label = `${event.keyName} (press ${rawKeyCount.current})`;
-      setRawKeyLog(label);
-      Speech.speak(`Received ${event.keyName}`);
-    },
-  });
+  } = usePedalInput();
 
   const [capturingAction, setCapturingAction] = React.useState<PedalAction | null>(null);
 
@@ -66,12 +56,6 @@ export function PedalSettingsScreen({ navigation }: Props) {
 
       <Text style={styles.statusText}>
         {isPedalConnected ? 'Pedal or keyboard connected' : 'No pedal connected'}
-      </Text>
-
-      <Text style={styles.rawKeyText} accessibilityLiveRegion="polite">
-        {rawKeyLog
-          ? `Last key received: ${rawKeyLog}`
-          : 'No key presses received yet. Press any pedal button to test.'}
       </Text>
 
       {(['next', 'previous'] as PedalAction[]).map((action) => (
@@ -139,11 +123,6 @@ const styles = StyleSheet.create({
   statusText: {
     color: '#9ad39a',
     fontSize: 15,
-    marginBottom: 8,
-  },
-  rawKeyText: {
-    color: '#ffcc66',
-    fontSize: 14,
     marginBottom: 24,
   },
   actionRow: {

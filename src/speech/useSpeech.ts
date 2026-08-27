@@ -2,25 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Speech from 'expo-speech';
 import { loadVoicePreference } from './voicePreference';
 
-export type SpeechCallCounts = {
-  speakCalls: number;
-  starts: number;
-  dones: number;
-  stops: number;
-  errors: number;
-};
-
 export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mounted = useRef(true);
   const voiceIdRef = useRef<string | null>(null);
-  const [counts, setCounts] = useState<SpeechCallCounts>({
-    speakCalls: 0,
-    starts: 0,
-    dones: 0,
-    stops: 0,
-    errors: 0,
-  });
 
   useEffect(() => {
     mounted.current = true;
@@ -60,30 +45,21 @@ export function useSpeech() {
       await Speech.stop();
       if (!mounted.current) return;
       setIsSpeaking(true);
-      setCounts((c) => ({ ...c, speakCalls: c.speakCalls + 1 }));
       Speech.speak(text, {
         voice: voiceIdRef.current ?? undefined,
         // Gives AVSpeechSynthesizer its own audio session instead of sharing
         // the app-wide one that the tick/end-of-song sound effects (expo-audio)
-        // also touch — found while investigating lines "fading" partway
-        // through, since expo-speech's default is to share that session, and
-        // a same-process session hand-off between two different playback
-        // engines is a real, if hard-to-prove-from-JS, way for one to cut the
-        // other off without ever surfacing as a JS-visible interruption event.
+        // also touch — fixed lines "fading" partway through, which turned out
+        // to be same-process session hand-off between the two playback
+        // engines, not the stop()/speak() ordering above.
         useApplicationAudioSession: false,
-        onStart: () => {
-          setCounts((c) => ({ ...c, starts: c.starts + 1 }));
-        },
         onDone: () => {
-          setCounts((c) => ({ ...c, dones: c.dones + 1 }));
           if (mounted.current) setIsSpeaking(false);
         },
         onStopped: () => {
-          setCounts((c) => ({ ...c, stops: c.stops + 1 }));
           if (mounted.current) setIsSpeaking(false);
         },
         onError: () => {
-          setCounts((c) => ({ ...c, errors: c.errors + 1 }));
           if (mounted.current) setIsSpeaking(false);
         },
       });
@@ -95,5 +71,5 @@ export function useSpeech() {
     setIsSpeaking(false);
   }, []);
 
-  return { isSpeaking, speakNow, stopImmediate, refreshVoicePreference, counts };
+  return { isSpeaking, speakNow, stopImmediate, refreshVoicePreference };
 }

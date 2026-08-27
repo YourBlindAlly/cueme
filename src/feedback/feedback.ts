@@ -37,16 +37,3 @@ export function playEndOfSongFeedback(): void {
     endPlayer?.play();
   })();
 }
-
-/**
- * Diagnostic-only feedback: a distinct double-buzz fired whenever the app
- * detects an iOS audio-session interruption ending and re-speaks the current
- * line as a result. Lets a listener tell, by feel alone, whether a given
- * "fading" line coincided with this code path firing — a real candidate
- * cause, since it's meant for phone-call-style interruptions but could in
- * theory also fire from the app's own tick-sound player briefly touching the
- * shared audio session.
- */
-export function playInterruptionResumeFeedback(): void {
-  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-}

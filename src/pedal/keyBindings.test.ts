@@ -12,13 +12,19 @@ describe('resolveAction', () => {
     expect(resolveAction(HID_USAGE.SPACEBAR, DEFAULT_KEY_BINDINGS)).toBe('next');
   });
 
-  it('resolves default left arrow / page up to previous', () => {
+  it('resolves default left arrow / page up / up arrow / enter to previous', () => {
     expect(resolveAction(HID_USAGE.LEFT_ARROW, DEFAULT_KEY_BINDINGS)).toBe('previous');
     expect(resolveAction(HID_USAGE.PAGE_UP, DEFAULT_KEY_BINDINGS)).toBe('previous');
+    expect(resolveAction(HID_USAGE.UP_ARROW, DEFAULT_KEY_BINDINGS)).toBe('previous');
+    expect(resolveAction(HID_USAGE.ENTER, DEFAULT_KEY_BINDINGS)).toBe('previous');
+  });
+
+  it('resolves default down arrow to next', () => {
+    expect(resolveAction(HID_USAGE.DOWN_ARROW, DEFAULT_KEY_BINDINGS)).toBe('next');
   });
 
   it('returns null for an unbound key', () => {
-    expect(resolveAction(HID_USAGE.UP_ARROW, DEFAULT_KEY_BINDINGS)).toBeNull();
+    expect(resolveAction(999, DEFAULT_KEY_BINDINGS)).toBeNull();
   });
 });
 

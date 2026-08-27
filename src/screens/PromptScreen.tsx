@@ -8,11 +8,7 @@ import { useAppState } from '../state/AppStateContext';
 import { useSpeech } from '../speech/useSpeech';
 import { useAudioInterruptionResume } from '../speech/useAudioInterruptionResume';
 import { loadReduceVoiceOverChatter } from '../speech/voiceOverPreference';
-import {
-  playAdvanceFeedback,
-  playEndOfSongFeedback,
-  playInterruptionResumeFeedback,
-} from '../feedback/feedback';
+import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Prompt'>;
@@ -36,7 +32,7 @@ export function PromptScreen({ navigation }: Props) {
   // screen unmounts before the (async, web-only) Wake Lock activation settles.
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   const { activeSong: song } = useAppState();
-  const { speakNow, stopImmediate, refreshVoicePreference, counts } = useSpeech();
+  const { speakNow, stopImmediate, refreshVoicePreference } = useSpeech();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
 
@@ -118,7 +114,6 @@ export function PromptScreen({ navigation }: Props) {
 
   const resumeCurrentLine = useCallback(() => {
     if (song) {
-      playInterruptionResumeFeedback();
       speakNow(song.lines[currentIndex]);
     }
   }, [currentIndex, song, speakNow]);
@@ -208,11 +203,6 @@ export function PromptScreen({ navigation }: Props) {
           <Text style={styles.touchStripLabel}>Next ›</Text>
         </Pressable>
       </View>
-
-      <Text style={styles.diagnosticsText}>
-        Speak calls: {counts.speakCalls}, started: {counts.starts}, done: {counts.dones},
-        stopped: {counts.stops}, errors: {counts.errors}
-      </Text>
     </View>
   );
 }
@@ -279,11 +269,5 @@ const styles = StyleSheet.create({
     color: '#4f8cff',
     fontSize: 20,
     fontWeight: '700',
-  },
-  diagnosticsText: {
-    color: '#555',
-    fontSize: 11,
-    textAlign: 'center',
-    paddingVertical: 6,
   },
 });

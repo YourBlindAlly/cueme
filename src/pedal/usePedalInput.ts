@@ -16,21 +16,9 @@ type Options = {
   onDisconnectAlert?: () => void;
   /** Called when the pedal (re)connects. */
   onConnectAlert?: () => void;
-  /**
-   * Called for every raw key-down event, regardless of bindings or capture
-   * state — a diagnostic hook so Settings can show/speak exactly which keys
-   * (if any) are actually reaching the app, independent of whether they're
-   * bound to an action or being captured for one.
-   */
-  onRawKey?: (event: KeyEventPayload) => void;
 };
 
-export function usePedalInput({
-  onAction,
-  onDisconnectAlert,
-  onConnectAlert,
-  onRawKey,
-}: Options = {}) {
+export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: Options = {}) {
   const [isPedalConnected, setIsPedalConnected] = useState(false);
   const [bindings, setBindingsState] = useState<KeyBinding[]>([]);
   const [alertOnDisconnect, setAlertOnDisconnectState] = useState(true);
@@ -45,8 +33,6 @@ export function usePedalInput({
   onDisconnectAlertRef.current = onDisconnectAlert;
   const onConnectAlertRef = useRef(onConnectAlert);
   onConnectAlertRef.current = onConnectAlert;
-  const onRawKeyRef = useRef(onRawKey);
-  onRawKeyRef.current = onRawKey;
   const alertOnDisconnectRef = useRef(alertOnDisconnect);
   alertOnDisconnectRef.current = alertOnDisconnect;
 
@@ -74,7 +60,6 @@ export function usePedalInput({
         if (!event.isKeyDown) {
           return;
         }
-        onRawKeyRef.current?.(event);
         if (captureResolverRef.current) {
           const resolver = captureResolverRef.current;
           captureResolverRef.current = null;
