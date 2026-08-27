@@ -88,7 +88,17 @@ public class CuemePedalInputModule: Module {
     }
 
     Function("isPedalConnected") { () -> Bool in
-      GCKeyboard.coalesced != nil
+      // Re-attaching here (not just in OnStartObserving/the connect
+      // notification) is a self-healing safety net: if a keyboard was
+      // already connected before this module started observing, the
+      // "did connect" notification never fires for it (notifications are
+      // edge-triggered), and if GCKeyboard.coalesced happened to be nil at
+      // the exact moment OnStartObserving ran, the handler would never get
+      // attached at all even though later connection checks correctly
+      // report true. Re-attaching on every check closes that gap.
+      let keyboard = GCKeyboard.coalesced
+      self.attachKeyHandler(to: keyboard?.keyboardInput)
+      return keyboard != nil
     }
   }
 

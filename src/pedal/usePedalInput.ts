@@ -86,6 +86,11 @@ export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: O
 
   /** Resolves with the next raw key press, for the Settings "press a button to assign" flow. */
   const captureNextKey = useCallback((): Promise<KeyEventPayload> => {
+    // isPedalConnected() also re-attaches the native key handler as a side
+    // effect — calling it here guarantees a fresh attachment right before
+    // the moment it matters most, in case a pedal that was already
+    // connected before this screen mounted never triggered the handler.
+    CuemePedalInput.isPedalConnected();
     setIsCapturing(true);
     return new Promise((resolve) => {
       captureResolverRef.current = resolve;
