@@ -55,3 +55,18 @@ export async function downloadDropboxFile(path: string): Promise<string> {
   });
   return res.text();
 }
+
+/**
+ * Returns the email of the currently-connected Dropbox account. Surfaced in
+ * the UI specifically so it's obvious which account got authorized — easy to
+ * mix up if more than one Dropbox account has ever been used on a device.
+ */
+export async function getDropboxAccountEmail(): Promise<string | null> {
+  const res = await authorizedFetch('https://api.dropboxapi.com/2/users/get_current_account', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: 'null',
+  });
+  const data = (await res.json()) as { email?: string };
+  return data.email ?? null;
+}

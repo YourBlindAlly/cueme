@@ -5,7 +5,12 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { isDropboxConfigured, useDropboxAuth } from '../cloud/dropbox/dropboxAuth';
-import { downloadDropboxFile, listDropboxFolder, type DropboxEntry } from '../cloud/dropbox/dropboxApi';
+import {
+  downloadDropboxFile,
+  getDropboxAccountEmail,
+  listDropboxFolder,
+  type DropboxEntry,
+} from '../cloud/dropbox/dropboxApi';
 import { buildSongFromFile } from '../parsing/buildSong';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DropboxBrowse'>;
@@ -17,6 +22,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   const [entries, setEntries] = useState<DropboxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme', path: 'redirect' });
 
   useEffect(() => {
@@ -29,6 +35,19 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
       .then(setEntries)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [isConnected, path]);
+
+  useEffect(() => {
+    if (!isConnected) {
+      setAccountEmail(null);
+      return;
+    }
+    // Shown in the header so it's obvious which Dropbox account is
+    // connected — easy to mix up if more than one account has ever been
+    // used on this device, and otherwise invisible from inside the app.
+    getDropboxAccountEmail()
+      .then(setAccountEmail)
+      .catch(() => setAccountEmail(null));
+  }, [isConnected]);
 
   const handleConnect = async () => {
     const result = await connect();
@@ -121,6 +140,8 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         </Pressable>
       </View>
 
+      {accountEmail && <Text style={styles.accountText}>Connected as {accountEmail}</Text>}
+
       {isDownloading && <ActivityIndicator color="#fff" style={styles.spinner} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -172,6 +193,11 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 22,
     fontWeight: '700',
+  },
+  accountText: {
+    color: '#9ad39a',
+    fontSize: 14,
+    marginBottom: 16,
   },
   infoText: {
     color: '#bbb',

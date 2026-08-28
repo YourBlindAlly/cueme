@@ -64,7 +64,11 @@ export default function App() {
       <AppStateProvider initialActiveSong={initialSong}>
         <NavigationContainer theme={darkTheme}>
           <Stack.Navigator
-            initialRouteName={initialSong ? 'Prompt' : 'Library'}
+            // Always open on the library/song-picker, even if a song was
+            // active last time — dropping straight into a song on load is
+            // for right after picking or pasting one, not for a cold app
+            // launch (Rusty's own distinction, clarified 2026-08-27).
+            initialRouteName="Library"
             screenOptions={{ headerShown: false }}
           >
             <Stack.Screen name="Library" component={LibraryScreen} />
