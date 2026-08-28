@@ -20,6 +20,11 @@ export function LibraryScreen({ navigation }: Props) {
   const { library, isLibraryLoaded, loadSong, removeFromLibrary } = useAppState();
   const [isImporting, setIsImporting] = useState(false);
 
+  // Plain navigate (not popTo) is correct here specifically because Library
+  // is always the root screen when this fires — every "return to Library"
+  // link elsewhere uses popTo, which fully collapses the stack back down to
+  // just this screen, so Prompt never exists yet at this point and a normal
+  // push is exactly right.
   const handleOpenSong = async (song: Song) => {
     await loadSong(song);
     navigation.navigate('Prompt');

@@ -91,7 +91,8 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         return;
       }
       await loadSong(song);
-      navigation.navigate('Prompt');
+      // popTo, not navigate — see PromptScreen's "Library" link for why.
+      navigation.popTo('Prompt');
     } catch (err) {
       Alert.alert('Download failed', err instanceof Error ? err.message : String(err));
     } finally {

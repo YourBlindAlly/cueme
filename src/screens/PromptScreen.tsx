@@ -257,7 +257,13 @@ export function PromptScreen({ navigation }: Props) {
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Load a different song"
-            onPress={() => navigation.navigate('Library')}
+            // popTo (not navigate) — React Navigation 7 changed navigate()
+            // to no longer pop back to an existing route by default (that's
+            // now popTo's job specifically); plain navigate('Library') was
+            // pushing a brand new Library screen on top every single time
+            // instead of returning to the one persistent instance, which is
+            // the actual root cause of the growing navigation stack below.
+            onPress={() => navigation.popTo('Library')}
           >
             <Text style={styles.exitLink}>Library</Text>
           </Pressable>

@@ -35,7 +35,12 @@ export function InputScreen({ navigation, route }: Props) {
       song.addedAt = editSong.addedAt;
     }
     await loadSong(song);
-    navigation.navigate('Prompt');
+    // popTo, not navigate — see PromptScreen's "Library" link for why. This
+    // screen is always pushed on top of either an existing Prompt (editing)
+    // or Library (new song); popTo correctly returns to that existing
+    // Prompt in the first case, and replaces this screen with a fresh
+    // Prompt (rather than leaving it stranded in history) in the second.
+    navigation.popTo('Prompt');
   };
 
   return (

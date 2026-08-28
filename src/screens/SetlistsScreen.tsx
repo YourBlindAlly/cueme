@@ -48,7 +48,8 @@ export function SetlistsScreen({ navigation }: Props) {
         );
         return;
       }
-      navigation.navigate('Prompt');
+      // popTo, not navigate — see PromptScreen's "Library" link for why.
+      navigation.popTo('Prompt');
     } catch (err) {
       Alert.alert('Couldn’t load setlist', err instanceof Error ? err.message : String(err));
     } finally {
