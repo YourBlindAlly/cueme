@@ -173,7 +173,13 @@ export function PromptScreen({ navigation }: Props) {
   const isEnded = currentIndex === spokenLines.lines.length - 1;
 
   return (
-    <View style={styles.container}>
+    // accessibilityViewIsModal keeps VoiceOver's swipe-navigation focus
+    // confined to this screen's own elements — without it, a swipe here can
+    // wander VoiceOver's focus into OS chrome (the status bar) instead of
+    // just moving between this screen's elements, which is what Rusty
+    // reported (status bar time/wifi getting read mid-swipe, not near the
+    // top of the screen).
+    <View style={styles.container} accessibilityViewIsModal>
       <View style={styles.header}>
         <Text style={styles.songTitle} numberOfLines={1}>
           {song.title}

@@ -272,10 +272,10 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
                 }
                 accessibilityLabel={
                   item.isFolder
-                    ? `Folder ${item.name}`
+                    ? `${item.name}, folder`
                     : isSelectMode
                       ? `${item.name}, ${isSelected ? 'selected' : 'not selected'}`
-                      : `Song file ${item.name}`
+                      : `${item.name}, song`
                 }
               >
                 <Text style={styles.entryText}>
