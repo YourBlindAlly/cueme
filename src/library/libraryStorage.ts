@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { migrateSong } from '../storage/migrateSong';
 import type { Song } from '../types';
 
 const LIBRARY_KEY = 'cueme.library';
@@ -8,7 +9,7 @@ export async function loadLibrary(): Promise<Song[]> {
   if (!raw) {
     return [];
   }
-  const songs = JSON.parse(raw) as Song[];
+  const songs = (JSON.parse(raw) as Song[]).map(migrateSong);
   return songs.sort((a, b) => b.addedAt - a.addedAt);
 }
 

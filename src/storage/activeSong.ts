@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { migrateSong } from './migrateSong';
 import type { Song } from '../types';
 
 const ACTIVE_SONG_KEY = 'cueme.activeSong';
@@ -12,7 +13,7 @@ export async function loadActiveSong(): Promise<Song | null> {
   if (!raw) {
     return null;
   }
-  return JSON.parse(raw) as Song;
+  return migrateSong(JSON.parse(raw) as Song);
 }
 
 export async function clearActiveSong(): Promise<void> {
