@@ -1,0 +1,319 @@
+import React, { useMemo, useState } from 'react';
+import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import type { RootStackParamList } from '../navigation/types';
+import { useAppState } from '../state/AppStateContext';
+import { saveSetlist } from '../setlist/setlistStorage';
+import type { SetlistEntry } from '../setlist/setlistCsv';
+import type { Song } from '../types';
+
+type Props = NativeStackScreenProps<RootStackParamList, 'SetlistCreator'>;
+
+function entryFor(song: Song): SetlistEntry {
+  return {
+    title: song.title,
+    path: song.source.type === 'dropbox' ? song.source.path : '',
+  };
+}
+
+export function SetlistCreatorScreen({ navigation }: Props) {
+  const { library } = useAppState();
+  const [name, setName] = useState('');
+  const [search, setSearch] = useState('');
+  const [entries, setEntries] = useState<SetlistEntry[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const addedPaths = useMemo(
+    () => new Set(entries.map((e) => e.path).filter((p) => p.length > 0)),
+    [entries]
+  );
+  const addedTitles = useMemo(
+    () => new Set(entries.filter((e) => !e.path).map((e) => e.title.toLowerCase())),
+    [entries]
+  );
+
+  const isAdded = (song: Song) => {
+    if (song.source.type === 'dropbox') {
+      return addedPaths.has(song.source.path);
+    }
+    return addedTitles.has(song.title.toLowerCase());
+  };
+
+  const filteredLibrary = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    const sorted = [...library].sort((a, b) => a.title.localeCompare(b.title));
+    if (!term) {
+      return sorted;
+    }
+    return sorted.filter((song) => song.title.toLowerCase().includes(term));
+  }, [library, search]);
+
+  const handleAdd = (song: Song) => {
+    if (isAdded(song)) {
+      return;
+    }
+    setEntries((current) => [...current, entryFor(song)]);
+  };
+
+  const handleRemove = (index: number) => {
+    setEntries((current) => current.filter((_, i) => i !== index));
+  };
+
+  const handleMove = (index: number, direction: -1 | 1) => {
+    setEntries((current) => {
+      const target = index + direction;
+      if (target < 0 || target >= current.length) {
+        return current;
+      }
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    if (!name.trim()) {
+      Alert.alert('Name needed', 'Give this setlist a name before saving.');
+      return;
+    }
+    if (entries.length === 0) {
+      Alert.alert('No songs added', 'Add at least one song before saving.');
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await saveSetlist({ name: name.trim(), entries });
+      navigation.goBack();
+    } catch (err) {
+      Alert.alert('Save failed', err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.headerRow}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back">
+          <Text style={styles.backLink}>Back</Text>
+        </Pressable>
+        <Text style={styles.heading} accessibilityRole="header">
+          New Setlist
+        </Text>
+      </View>
+
+      <TextInput
+        style={styles.nameInput}
+        value={name}
+        onChangeText={setName}
+        placeholder="Setlist name"
+        placeholderTextColor="#777"
+        accessibilityLabel="Setlist name"
+      />
+
+      <View style={styles.currentSection}>
+        <Text style={styles.sectionLabel} accessibilityRole="header">
+          Songs in this setlist ({entries.length})
+        </Text>
+        {entries.length === 0 ? (
+          <Text style={styles.emptyText}>Nothing added yet — pick songs from the list below.</Text>
+        ) : (
+          entries.map((entry, index) => (
+            <View key={`${entry.path || entry.title}-${index}`} style={styles.entryRow}>
+              <Text style={styles.entryPosition}>{index + 1}.</Text>
+              <Text style={styles.entryTitle} numberOfLines={1}>
+                {entry.title}
+              </Text>
+              <Pressable
+                onPress={() => handleMove(index, -1)}
+                disabled={index === 0}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${entry.title} up`}
+              >
+                <Text style={[styles.moveLink, index === 0 && styles.linkDisabled]}>Up</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleMove(index, 1)}
+                disabled={index === entries.length - 1}
+                accessibilityRole="button"
+                accessibilityLabel={`Move ${entry.title} down`}
+              >
+                <Text style={[styles.moveLink, index === entries.length - 1 && styles.linkDisabled]}>
+                  Down
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => handleRemove(index)}
+                accessibilityRole="button"
+                accessibilityLabel={`Remove ${entry.title} from setlist`}
+              >
+                <Text style={styles.removeLink}>Remove</Text>
+              </Pressable>
+            </View>
+          ))
+        )}
+      </View>
+
+      <Pressable
+        style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+        onPress={handleSave}
+        disabled={isSaving}
+        accessibilityRole="button"
+        accessibilityLabel="Save setlist"
+      >
+        <Text style={styles.saveButtonText}>{isSaving ? 'Saving…' : 'Save Setlist'}</Text>
+      </Pressable>
+
+      <TextInput
+        style={styles.searchInput}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search your songs"
+        placeholderTextColor="#777"
+        accessibilityLabel="Search your songs"
+      />
+
+      <FlatList
+        data={filteredLibrary}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={<Text style={styles.emptyText}>No songs match.</Text>}
+        renderItem={({ item }) => {
+          const added = isAdded(item);
+          return (
+            <Pressable
+              style={[styles.libraryRow, added && styles.libraryRowAdded]}
+              onPress={() => handleAdd(item)}
+              disabled={added}
+              accessibilityRole="button"
+              accessibilityLabel={added ? `${item.title}, already added` : `Add ${item.title}`}
+            >
+              <Text style={styles.libraryTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              {added ? <Text style={styles.addedMark}>Added</Text> : null}
+            </Pressable>
+          );
+        }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#000',
+    padding: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    gap: 16,
+  },
+  backLink: {
+    color: '#4f8cff',
+    fontSize: 16,
+  },
+  heading: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '700',
+  },
+  nameInput: {
+    backgroundColor: '#1c1c1c',
+    color: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 16,
+  },
+  currentSection: {
+    marginBottom: 12,
+  },
+  sectionLabel: {
+    color: '#999',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  emptyText: {
+    color: '#999',
+    fontSize: 14,
+  },
+  entryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1c1c1c',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 6,
+    gap: 10,
+  },
+  entryPosition: {
+    color: '#777',
+    fontSize: 14,
+    width: 20,
+  },
+  entryTitle: {
+    color: '#fff',
+    fontSize: 15,
+    flex: 1,
+  },
+  moveLink: {
+    color: '#4f8cff',
+    fontSize: 13,
+  },
+  linkDisabled: {
+    color: '#3a3a3a',
+  },
+  removeLink: {
+    color: '#ff6b6b',
+    fontSize: 13,
+  },
+  saveButton: {
+    backgroundColor: '#2f6fed',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  saveButtonDisabled: {
+    backgroundColor: '#2a3a5c',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  searchInput: {
+    backgroundColor: '#1c1c1c',
+    color: '#fff',
+    borderRadius: 10,
+    padding: 12,
+    fontSize: 16,
+    marginBottom: 12,
+  },
+  libraryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#141414',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 6,
+  },
+  libraryRowAdded: {
+    opacity: 0.5,
+  },
+  libraryTitle: {
+    color: '#fff',
+    fontSize: 15,
+    flex: 1,
+  },
+  addedMark: {
+    color: '#9ad39a',
+    fontSize: 13,
+    marginLeft: 8,
+  },
+});

@@ -95,6 +95,21 @@ describe('parseChordPro', () => {
     ]);
   });
 
+  it('drops a stray URL/capo line with no directive or comment marking (real Counting Stars case)', () => {
+    const result = parseChordPro(
+      [
+        '{t: Counting Stars }',
+        '{key: G}',
+        ' https://www.youtube.com/watch?v=Yim4--J44gk  Capo 2',
+        "[Bm] Lately, I've been, [D] I've been losing sleep",
+      ].join('\n')
+    );
+    // Double space is pre-existing chord-stripping behavior (removing "[D] "
+    // leaves the space that preceded it plus the one that followed) — not
+    // something this test is about.
+    expect(result.lines).toEqual(["Lately, I've been,  I've been losing sleep"]);
+  });
+
   it('drops a bare chord-only line from chordedLines too, one-to-one with lines', () => {
     const result = parseChordPro('[G] [C] [D]\nReal lyric line');
     expect(result.chordedLines).toEqual([

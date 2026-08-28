@@ -8,17 +8,30 @@ import {
   saveKeyBindings,
 } from './bindingsStorage';
 import { resolveAction, setBinding, type KeyBinding, type PedalAction } from './keyBindings';
+import { DoublePressDetector } from './doublePressDetector';
 
 type Options = {
   /** Called for every key press that resolves to a bound action (ignored while capturing a new binding). */
   onAction?: (action: PedalAction) => void;
+  /**
+   * Called when a press completes a double press of the same action — fires
+   * IN ADDITION to onAction (which already fired for both presses), never
+   * instead of it, so single-press line advance is never delayed waiting to
+   * see if a second press follows.
+   */
+  onDoubleAction?: (action: PedalAction) => void;
   /** Called when the pedal disconnects, if the disconnect-alert setting is on. */
   onDisconnectAlert?: () => void;
   /** Called when the pedal (re)connects. */
   onConnectAlert?: () => void;
 };
 
-export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: Options = {}) {
+export function usePedalInput({
+  onAction,
+  onDoubleAction,
+  onDisconnectAlert,
+  onConnectAlert,
+}: Options = {}) {
   const [isPedalConnected, setIsPedalConnected] = useState(false);
   const [bindings, setBindingsState] = useState<KeyBinding[]>([]);
   const [alertOnDisconnect, setAlertOnDisconnectState] = useState(true);
@@ -29,6 +42,9 @@ export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: O
   const captureResolverRef = useRef<((event: KeyEventPayload) => void) | null>(null);
   const onActionRef = useRef(onAction);
   onActionRef.current = onAction;
+  const onDoubleActionRef = useRef(onDoubleAction);
+  onDoubleActionRef.current = onDoubleAction;
+  const doublePressDetectorRef = useRef(new DoublePressDetector());
   const onDisconnectAlertRef = useRef(onDisconnectAlert);
   onDisconnectAlertRef.current = onDisconnectAlert;
   const onConnectAlertRef = useRef(onConnectAlert);
@@ -69,7 +85,13 @@ export function usePedalInput({ onAction, onDisconnectAlert, onConnectAlert }: O
         }
         const action = resolveAction(event.keyCode, bindingsRef.current);
         if (action) {
+          // Single-press behavior fires immediately and unconditionally,
+          // every time — double-press detection is layered on top, not a
+          // gate in front of it, so ordinary line advance is never delayed.
           onActionRef.current?.(action);
+          if (doublePressDetectorRef.current.registerPress(action)) {
+            onDoubleActionRef.current?.(action);
+          }
         }
       }),
     ];

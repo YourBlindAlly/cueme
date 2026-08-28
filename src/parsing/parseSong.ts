@@ -1,6 +1,7 @@
 import type { SectionMarker } from '../types';
 import type { ChordedWord } from './chordedWord';
 import { tokenizePlainLine } from './chordedWord';
+import { isJunkLine } from './junkLineFilter';
 
 const BARE_DIVIDER = /^--+$/;
 const LABELED_DASH = /^--+\s*(.+?)\s*--*$/;
@@ -39,7 +40,7 @@ export function parseSong(rawText: string): ParsedSong {
 
   for (const rawLine of rawText.split(/\r\n|\r|\n/)) {
     const trimmed = rawLine.trim();
-    if (trimmed.length === 0) {
+    if (trimmed.length === 0 || isJunkLine(trimmed)) {
       continue;
     }
 

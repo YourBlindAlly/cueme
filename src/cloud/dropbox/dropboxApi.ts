@@ -25,27 +25,54 @@ async function authorizedFetch(url: string, init: RequestInit): Promise<Response
   return res;
 }
 
-/** Lists folders and recognized song files (.txt, ChordPro) at `path` ('' for the root). */
-export async function listDropboxFolder(path: string): Promise<DropboxEntry[]> {
-  const res = await authorizedFetch('https://api.dropboxapi.com/2/files/list_folder', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path }),
-  });
+/**
+ * Lists folders and files matching `extensions` at `path` ('' for the root).
+ * A folder that doesn't exist yet (e.g. a "Setlists" folder before the first
+ * setlist has ever been saved) is treated as empty rather than an error —
+ * Dropbox creates parent folders automatically on upload, so there's no
+ * separate "create this folder" step needed before the first save.
+ */
+export async function listDropboxFolder(
+  path: string,
+  extensions: string[] = SONG_EXTENSIONS
+): Promise<DropboxEntry[]> {
+  let res: Response;
+  try {
+    res = await authorizedFetch('https://api.dropboxapi.com/2/files/list_folder', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path }),
+    });
+  } catch (err) {
+    if (err instanceof Error && err.message.includes('path/not_found')) {
+      return [];
+    }
+    throw err;
+  }
   const data = (await res.json()) as {
     entries: { '.tag': string; name: string; path_lower: string }[];
   };
   return data.entries
     .filter(
-      (e) =>
-        e['.tag'] === 'folder' ||
-        SONG_EXTENSIONS.some((ext) => e.name.toLowerCase().endsWith(ext))
+      (e) => e['.tag'] === 'folder' || extensions.some((ext) => e.name.toLowerCase().endsWith(ext))
     )
     .map((e) => ({ name: e.name, path: e.path_lower, isFolder: e['.tag'] === 'folder' }))
     .sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
+}
+
+/** Writes (or overwrites) a text file at `path`, creating any missing parent folders. */
+export async function uploadDropboxFile(path: string, content: string): Promise<void> {
+  await authorizedFetch('https://content.dropboxapi.com/2/files/upload', {
+    method: 'POST',
+    headers: {
+      'Dropbox-API-Arg': JSON.stringify({ path, mode: 'overwrite', mute: true }),
+      'Content-Type': 'application/octet-stream',
+    },
+    body: content,
+  });
 }
 
 export async function downloadDropboxFile(path: string): Promise<string> {

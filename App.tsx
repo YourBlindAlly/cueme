@@ -11,6 +11,8 @@ import { PedalSettingsScreen } from './src/screens/PedalSettingsScreen';
 import { VoiceSettingsScreen } from './src/screens/VoiceSettingsScreen';
 import { LineLengthSettingsScreen } from './src/screens/LineLengthSettingsScreen';
 import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
+import { SetlistsScreen } from './src/screens/SetlistsScreen';
+import { SetlistCreatorScreen } from './src/screens/SetlistCreatorScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
 import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
 import { configureAudioSession } from './src/feedback/feedback';
@@ -79,6 +81,8 @@ export default function App() {
             <Stack.Screen name="VoiceSettings" component={VoiceSettingsScreen} />
             <Stack.Screen name="LineLengthSettings" component={LineLengthSettingsScreen} />
             <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
+            <Stack.Screen name="Setlists" component={SetlistsScreen} />
+            <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
           </Stack.Navigator>
         </NavigationContainer>
       </AppStateProvider>

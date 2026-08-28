@@ -96,6 +96,14 @@ export function LibraryScreen({ navigation }: Props) {
         >
           <Text style={styles.actionButtonText}>Dropbox</Text>
         </Pressable>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Setlists')}
+          accessibilityRole="button"
+          accessibilityLabel="Setlists"
+        >
+          <Text style={styles.actionButtonText}>Setlists</Text>
+        </Pressable>
       </View>
 
       {isLibraryLoaded && library.length === 0 ? (

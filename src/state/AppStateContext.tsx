@@ -1,6 +1,14 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { saveActiveSong } from '../storage/activeSong';
+import {
+  clearActiveSetlist,
+  loadActiveSetlist,
+  saveActiveSetlist,
+  type ActiveSetlistState,
+} from '../storage/activeSetlist';
 import { loadLibrary, removeLibrarySong, upsertLibrarySong } from '../library/libraryStorage';
+import { resolveSetlistEntry } from '../setlist/resolveSetlistEntry';
+import type { Setlist } from '../setlist/setlistCsv';
 import type { Song } from '../types';
 
 type AppStateValue = {
@@ -12,6 +20,13 @@ type AppStateValue = {
   /** Adds/updates a song in the library WITHOUT making it the active song — for bulk import. */
   addToLibrary: (song: Song) => Promise<void>;
   removeFromLibrary: (id: string) => Promise<void>;
+  /** The currently loaded setlist and position within it, or null if none is active. */
+  activeSetlist: ActiveSetlistState | null;
+  /** Loads a setlist, resolves its first available song against the library, and makes it active. */
+  startSetlist: (setlist: Setlist) => Promise<{ started: boolean }>;
+  /** Advances to the next/previous song in the active setlist, skipping any entry that no longer resolves. Does nothing if no setlist is active or the edge of the list is reached. */
+  advanceSetlist: (direction: 'next' | 'previous') => Promise<void>;
+  clearSetlist: () => Promise<void>;
 };
 
 const AppStateContext = createContext<AppStateValue | null>(null);
@@ -26,12 +41,14 @@ export function AppStateProvider({
   const [activeSong, setActiveSong] = useState<Song | null>(initialActiveSong);
   const [library, setLibrary] = useState<Song[]>([]);
   const [isLibraryLoaded, setIsLibraryLoaded] = useState(false);
+  const [activeSetlist, setActiveSetlistState] = useState<ActiveSetlistState | null>(null);
 
   useEffect(() => {
     loadLibrary().then((songs) => {
       setLibrary(songs);
       setIsLibraryLoaded(true);
     });
+    loadActiveSetlist().then(setActiveSetlistState);
   }, []);
 
   const loadSong = useCallback(async (song: Song) => {
@@ -51,9 +68,65 @@ export function AppStateProvider({
     setLibrary(updated);
   }, []);
 
+  const startSetlist = useCallback(
+    async (setlist: Setlist): Promise<{ started: boolean }> => {
+      for (let i = 0; i < setlist.entries.length; i++) {
+        const song = resolveSetlistEntry(setlist.entries[i], library);
+        if (song) {
+          await loadSong(song);
+          const state: ActiveSetlistState = { setlist, currentIndex: i };
+          setActiveSetlistState(state);
+          await saveActiveSetlist(state);
+          return { started: true };
+        }
+      }
+      return { started: false };
+    },
+    [library, loadSong]
+  );
+
+  const advanceSetlist = useCallback(
+    async (direction: 'next' | 'previous') => {
+      if (!activeSetlist) {
+        return;
+      }
+      const { setlist, currentIndex } = activeSetlist;
+      const step = direction === 'next' ? 1 : -1;
+      for (let i = currentIndex + step; i >= 0 && i < setlist.entries.length; i += step) {
+        const song = resolveSetlistEntry(setlist.entries[i], library);
+        if (song) {
+          await loadSong(song);
+          const state: ActiveSetlistState = { setlist, currentIndex: i };
+          setActiveSetlistState(state);
+          await saveActiveSetlist(state);
+          return;
+        }
+      }
+      // No further resolvable song in that direction (edge of the setlist,
+      // or every remaining entry is missing from the library) — stay put.
+    },
+    [activeSetlist, library, loadSong]
+  );
+
+  const clearSetlist = useCallback(async () => {
+    setActiveSetlistState(null);
+    await clearActiveSetlist();
+  }, []);
+
   return (
     <AppStateContext.Provider
-      value={{ activeSong, library, isLibraryLoaded, loadSong, addToLibrary, removeFromLibrary }}
+      value={{
+        activeSong,
+        library,
+        isLibraryLoaded,
+        loadSong,
+        addToLibrary,
+        removeFromLibrary,
+        activeSetlist,
+        startSetlist,
+        advanceSetlist,
+        clearSetlist,
+      }}
     >
       {children}
     </AppStateContext.Provider>

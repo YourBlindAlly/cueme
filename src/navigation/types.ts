@@ -8,4 +8,6 @@ export type RootStackParamList = {
   VoiceSettings: undefined;
   LineLengthSettings: undefined;
   DropboxBrowse: { path: string } | undefined;
+  Setlists: undefined;
+  SetlistCreator: undefined;
 };

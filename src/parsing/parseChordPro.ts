@@ -1,6 +1,7 @@
 import type { SectionMarker } from '../types';
 import type { ChordedWord } from './chordedWord';
 import { tokenizeChordedLine } from './chordedWord';
+import { isJunkLine } from './junkLineFilter';
 
 export type ParsedChordProSong = {
   title: string | null;
@@ -76,7 +77,7 @@ export function parseChordPro(rawText: string): ParsedChordProSong {
       continue;
     }
 
-    if (trimmed.length === 0 || trimmed.startsWith('#')) {
+    if (trimmed.length === 0 || trimmed.startsWith('#') || isJunkLine(trimmed)) {
       continue;
     }
 

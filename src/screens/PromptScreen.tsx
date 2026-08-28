@@ -38,7 +38,7 @@ export function PromptScreen({ navigation }: Props) {
   // suppressDeactivateWarnings avoids a benign unhandled-rejection when the
   // screen unmounts before the (async, web-only) Wake Lock activation settles.
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
-  const { activeSong: song } = useAppState();
+  const { activeSong: song, activeSetlist, advanceSetlist } = useAppState();
   const { speakNow, stopImmediate, refreshVoicePreference } = useSpeech();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
@@ -142,6 +142,12 @@ export function PromptScreen({ navigation }: Props) {
         goPrevious();
       }
     },
+    // A double press changes song within the active setlist — layered on
+    // top of the single-press line-advance above, which already fired for
+    // both presses; a no-op if no setlist is currently active.
+    onDoubleAction: (action) => {
+      void advanceSetlist(action);
+    },
     onDisconnectAlert: () => {
       speakNow('Pedal disconnected. Using on-screen buttons.');
     },
@@ -181,10 +187,18 @@ export function PromptScreen({ navigation }: Props) {
     // top of the screen).
     <View style={styles.container} accessibilityViewIsModal>
       <View style={styles.header}>
-        <Text style={styles.songTitle} numberOfLines={1}>
-          {song.title}
-          {song.key ? ` — Key of ${song.key}` : ''}
-        </Text>
+        <View style={styles.headerTextBlock}>
+          <Text style={styles.songTitle} numberOfLines={1}>
+            {song.title}
+            {song.key ? ` — Key of ${song.key}` : ''}
+          </Text>
+          {activeSetlist ? (
+            <Text style={styles.setlistText} numberOfLines={1}>
+              {activeSetlist.setlist.name} — song {activeSetlist.currentIndex + 1} of{' '}
+              {activeSetlist.setlist.entries.length}
+            </Text>
+          ) : null}
+        </View>
         <View style={styles.headerLinks}>
           <Pressable
             accessibilityRole="button"
@@ -271,10 +285,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 16,
   },
+  headerTextBlock: {
+    flexShrink: 1,
+  },
   songTitle: {
     color: '#999',
     fontSize: 16,
     flexShrink: 1,
+  },
+  setlistText: {
+    color: '#4f8cff',
+    fontSize: 13,
+    marginTop: 2,
   },
   headerLinks: {
     flexDirection: 'row',
