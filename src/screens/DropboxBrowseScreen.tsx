@@ -17,12 +17,17 @@ type Props = NativeStackScreenProps<RootStackParamList, 'DropboxBrowse'>;
 
 export function DropboxBrowseScreen({ navigation, route }: Props) {
   const path = route.params?.path ?? '';
-  const { loadSong } = useAppState();
+  const { loadSong, addToLibrary } = useAppState();
   const { isConnected, isChecking, connect, disconnect } = useDropboxAuth();
   const [entries, setEntries] = useState<DropboxEntry[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
+  const [isSelectMode, setIsSelectMode] = useState(false);
+  const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
+  const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(
+    null
+  );
   const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme', path: 'redirect' });
 
   useEffect(() => {
@@ -31,6 +36,8 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
     }
     setEntries(null);
     setError(null);
+    setIsSelectMode(false);
+    setSelectedPaths(new Set());
     listDropboxFolder(path)
       .then(setEntries)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
@@ -61,6 +68,18 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
       navigation.push('DropboxBrowse', { path: entry.path });
       return;
     }
+    if (isSelectMode) {
+      setSelectedPaths((current) => {
+        const next = new Set(current);
+        if (next.has(entry.path)) {
+          next.delete(entry.path);
+        } else {
+          next.add(entry.path);
+        }
+        return next;
+      });
+      return;
+    }
     setIsDownloading(true);
     try {
       const text = await downloadDropboxFile(entry.path);
@@ -76,6 +95,53 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const files = (entries ?? []).filter((e) => !e.isFolder);
+
+  const handleToggleSelectMode = () => {
+    setIsSelectMode((current) => !current);
+    setSelectedPaths(new Set());
+  };
+
+  const handleSelectAll = () => {
+    setSelectedPaths((current) =>
+      current.size === files.length ? new Set() : new Set(files.map((f) => f.path))
+    );
+  };
+
+  const handleImportSelected = async () => {
+    const toImport = files.filter((f) => selectedPaths.has(f.path));
+    if (toImport.length === 0) {
+      return;
+    }
+    setImportProgress({ done: 0, total: toImport.length });
+    let imported = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (let i = 0; i < toImport.length; i++) {
+      const entry = toImport[i];
+      try {
+        const text = await downloadDropboxFile(entry.path);
+        const song = buildSongFromFile(text, entry.name, { type: 'dropbox', path: entry.path });
+        if (song) {
+          await addToLibrary(song);
+          imported += 1;
+        } else {
+          skipped += 1;
+        }
+      } catch {
+        failed += 1;
+      }
+      setImportProgress({ done: i + 1, total: toImport.length });
+    }
+    setImportProgress(null);
+    setIsSelectMode(false);
+    setSelectedPaths(new Set());
+    const parts = [`Imported ${imported} song${imported === 1 ? '' : 's'}.`];
+    if (skipped > 0) parts.push(`${skipped} had no lyric lines and were skipped.`);
+    if (failed > 0) parts.push(`${failed} failed to download.`);
+    Alert.alert('Import complete', parts.join(' '));
   };
 
   if (!isDropboxConfigured) {
@@ -131,16 +197,58 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         <Text style={styles.heading} accessibilityRole="header">
           {path ? path.split('/').pop() : 'Dropbox'}
         </Text>
-        <Pressable
-          onPress={disconnect}
-          accessibilityRole="button"
-          accessibilityLabel="Disconnect Dropbox"
-        >
-          <Text style={styles.disconnectLink}>Disconnect</Text>
-        </Pressable>
+        <View style={styles.headerButtons}>
+          {files.length > 0 && (
+            <Pressable
+              onPress={handleToggleSelectMode}
+              accessibilityRole="button"
+              accessibilityLabel={isSelectMode ? 'Cancel selecting songs' : 'Select multiple songs to import'}
+            >
+              <Text style={styles.selectLink}>{isSelectMode ? 'Cancel' : 'Select'}</Text>
+            </Pressable>
+          )}
+          <Pressable
+            onPress={disconnect}
+            accessibilityRole="button"
+            accessibilityLabel="Disconnect Dropbox"
+          >
+            <Text style={styles.disconnectLink}>Disconnect</Text>
+          </Pressable>
+        </View>
       </View>
 
       {accountEmail && <Text style={styles.accountText}>Connected as {accountEmail}</Text>}
+
+      {isSelectMode && (
+        <View style={styles.selectBar}>
+          <Pressable
+            onPress={handleSelectAll}
+            accessibilityRole="button"
+            accessibilityLabel={
+              selectedPaths.size === files.length ? 'Deselect all songs' : 'Select all songs'
+            }
+          >
+            <Text style={styles.selectLink}>
+              {selectedPaths.size === files.length ? 'Deselect All' : 'Select All'}
+            </Text>
+          </Pressable>
+          <Pressable
+            style={[styles.importButton, selectedPaths.size === 0 && styles.importButtonDisabled]}
+            onPress={handleImportSelected}
+            disabled={selectedPaths.size === 0 || importProgress !== null}
+            accessibilityRole="button"
+            accessibilityLabel={`Import ${selectedPaths.size} selected song${selectedPaths.size === 1 ? '' : 's'}`}
+          >
+            <Text style={styles.importButtonText}>Import {selectedPaths.size} Selected</Text>
+          </Pressable>
+        </View>
+      )}
+
+      {importProgress && (
+        <Text style={styles.accountText} accessibilityLiveRegion="polite">
+          Importing {importProgress.done} of {importProgress.total}…
+        </Text>
+      )}
 
       {isDownloading && <ActivityIndicator color="#fff" style={styles.spinner} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
@@ -152,19 +260,32 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
           data={entries ?? []}
           keyExtractor={(item) => item.path}
           ListEmptyComponent={<Text style={styles.emptyText}>Nothing here.</Text>}
-          renderItem={({ item }) => (
-            <Pressable
-              style={styles.entryRow}
-              onPress={() => handleEntryPress(item)}
-              accessibilityRole="button"
-              accessibilityLabel={item.isFolder ? `Folder ${item.name}` : `Song file ${item.name}`}
-            >
-              <Text style={styles.entryText}>
-                {item.isFolder ? '📁 ' : '🎵 '}
-                {item.name}
-              </Text>
-            </Pressable>
-          )}
+          renderItem={({ item }) => {
+            const isSelected = selectedPaths.has(item.path);
+            return (
+              <Pressable
+                style={styles.entryRow}
+                onPress={() => handleEntryPress(item)}
+                accessibilityRole={isSelectMode && !item.isFolder ? 'checkbox' : 'button'}
+                accessibilityState={
+                  isSelectMode && !item.isFolder ? { checked: isSelected } : undefined
+                }
+                accessibilityLabel={
+                  item.isFolder
+                    ? `Folder ${item.name}`
+                    : isSelectMode
+                      ? `${item.name}, ${isSelected ? 'selected' : 'not selected'}`
+                      : `Song file ${item.name}`
+                }
+              >
+                <Text style={styles.entryText}>
+                  {isSelectMode && !item.isFolder ? (isSelected ? '☑ ' : '☐ ') : ''}
+                  {item.isFolder ? '📁 ' : '🎵 '}
+                  {item.name}
+                </Text>
+              </Pressable>
+            );
+          }}
         />
       )}
     </View>
@@ -188,6 +309,35 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
+  },
+  selectLink: {
+    color: '#4f8cff',
+    fontSize: 14,
+  },
+  selectBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  importButton: {
+    backgroundColor: '#2f6fed',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  importButtonDisabled: {
+    backgroundColor: '#2a3a5c',
+  },
+  importButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '700',
   },
   heading: {
     color: '#fff',

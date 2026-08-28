@@ -9,6 +9,8 @@ type AppStateValue = {
   isLibraryLoaded: boolean;
   /** Sets a song as active (persists it) and adds/updates it in the library. */
   loadSong: (song: Song) => Promise<void>;
+  /** Adds/updates a song in the library WITHOUT making it the active song — for bulk import. */
+  addToLibrary: (song: Song) => Promise<void>;
   removeFromLibrary: (id: string) => Promise<void>;
 };
 
@@ -39,6 +41,11 @@ export function AppStateProvider({
     setLibrary(updated);
   }, []);
 
+  const addToLibrary = useCallback(async (song: Song) => {
+    const updated = await upsertLibrarySong(song);
+    setLibrary(updated);
+  }, []);
+
   const removeFromLibrary = useCallback(async (id: string) => {
     const updated = await removeLibrarySong(id);
     setLibrary(updated);
@@ -46,7 +53,7 @@ export function AppStateProvider({
 
   return (
     <AppStateContext.Provider
-      value={{ activeSong, library, isLibraryLoaded, loadSong, removeFromLibrary }}
+      value={{ activeSong, library, isLibraryLoaded, loadSong, addToLibrary, removeFromLibrary }}
     >
       {children}
     </AppStateContext.Provider>
