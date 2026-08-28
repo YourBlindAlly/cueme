@@ -26,13 +26,30 @@ export function LibraryScreen({ navigation }: Props) {
   const handleImportFile = async () => {
     setIsImporting(true);
     try {
-      const song = await pickAndImportLocalFile();
+      // The system file picker has been observed to hang indefinitely when
+      // browsing into some third-party cloud providers (Google Drive's Files
+      // extension in particular) instead of resolving or rejecting — without
+      // this timeout, that leaves the button stuck disabled until the app is
+      // force-quit. Dropbox's own dedicated screen doesn't have this problem.
+      const song = await Promise.race([
+        pickAndImportLocalFile(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('TIMEOUT')), 30000)
+        ),
+      ]);
       if (song) {
         await loadSong(song);
         navigation.navigate('Prompt');
       }
     } catch (err) {
-      Alert.alert('Import failed', err instanceof Error ? err.message : String(err));
+      if (err instanceof Error && err.message === 'TIMEOUT') {
+        Alert.alert(
+          'File picker unresponsive',
+          "The file picker didn't respond in time — this can happen when browsing into Google Drive. Try again and use local files or iCloud, or use the Dropbox button for cloud files."
+        );
+      } else {
+        Alert.alert('Import failed', err instanceof Error ? err.message : String(err));
+      }
     } finally {
       setIsImporting(false);
     }
