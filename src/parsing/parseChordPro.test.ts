@@ -80,4 +80,29 @@ describe('parseChordPro', () => {
     expect(result.title).toBeNull();
     expect(result.key).toBeNull();
   });
+
+  it('keeps chord positions in chordedLines while lines has the stripped text', () => {
+    const result = parseChordPro('[G]Amazing [C]grace, how [G]sweet the sound');
+    expect(result.chordedLines).toEqual([
+      [
+        { chord: 'G', text: 'Amazing' },
+        { chord: 'C', text: 'grace,' },
+        { chord: null, text: 'how' },
+        { chord: 'G', text: 'sweet' },
+        { chord: null, text: 'the' },
+        { chord: null, text: 'sound' },
+      ],
+    ]);
+  });
+
+  it('drops a bare chord-only line from chordedLines too, one-to-one with lines', () => {
+    const result = parseChordPro('[G] [C] [D]\nReal lyric line');
+    expect(result.chordedLines).toEqual([
+      [
+        { chord: null, text: 'Real' },
+        { chord: null, text: 'lyric' },
+        { chord: null, text: 'line' },
+      ],
+    ]);
+  });
 });

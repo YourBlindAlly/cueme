@@ -1,4 +1,6 @@
 import type { SectionMarker } from '../types';
+import type { ChordedWord } from './chordedWord';
+import { tokenizePlainLine } from './chordedWord';
 
 const BARE_DIVIDER = /^--+$/;
 const LABELED_DASH = /^--+\s*(.+?)\s*--*$/;
@@ -21,6 +23,7 @@ function sectionLabelFor(trimmed: string): string | null {
 
 export type ParsedSong = {
   lines: string[];
+  chordedLines: ChordedWord[][];
   sections: SectionMarker[];
 };
 
@@ -31,6 +34,7 @@ export type ParsedSong = {
  */
 export function parseSong(rawText: string): ParsedSong {
   const lines: string[] = [];
+  const chordedLines: ChordedWord[][] = [];
   const sections: SectionMarker[] = [];
 
   for (const rawLine of rawText.split(/\r\n|\r|\n/)) {
@@ -46,7 +50,8 @@ export function parseSong(rawText: string): ParsedSong {
     }
 
     lines.push(trimmed);
+    chordedLines.push(tokenizePlainLine(trimmed));
   }
 
-  return { lines, sections };
+  return { lines, chordedLines, sections };
 }

@@ -40,11 +40,25 @@ describe('parseSong', () => {
   });
 
   it('handles an empty song', () => {
-    expect(parseSong('')).toEqual({ lines: [], sections: [] });
+    expect(parseSong('')).toEqual({ lines: [], chordedLines: [], sections: [] });
   });
 
   it('trims surrounding whitespace on each line', () => {
     const { lines } = parseSong('  Padded line  \n\tTabbed line\t');
     expect(lines).toEqual(['Padded line', 'Tabbed line']);
+  });
+
+  it('produces chordedLines with no chord data, one-to-one with lines', () => {
+    const { chordedLines } = parseSong('Line one\nLine two');
+    expect(chordedLines).toEqual([
+      [
+        { chord: null, text: 'Line' },
+        { chord: null, text: 'one' },
+      ],
+      [
+        { chord: null, text: 'Line' },
+        { chord: null, text: 'two' },
+      ],
+    ]);
   });
 });

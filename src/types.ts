@@ -1,3 +1,5 @@
+import type { ChordedWord } from './parsing/chordedWord';
+
 export type SectionMarker = {
   /** Index into Song.lines that this section starts at. */
   lineIndex: number;
@@ -18,6 +20,8 @@ export type Song = {
   rawText: string;
   /** Spoken lines, with section-marker lines already stripped out. */
   lines: string[];
+  /** Same lines as `lines`, one array per entry, but with chord data preserved for chord-aware line wrapping. */
+  chordedLines: ChordedWord[][];
   /** Reserved for the future section-jump feature; populated now, not yet wired to any gesture. */
   sections: SectionMarker[];
   source: SongSource;

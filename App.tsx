@@ -9,6 +9,7 @@ import { InputScreen } from './src/screens/InputScreen';
 import { PromptScreen } from './src/screens/PromptScreen';
 import { PedalSettingsScreen } from './src/screens/PedalSettingsScreen';
 import { VoiceSettingsScreen } from './src/screens/VoiceSettingsScreen';
+import { LineLengthSettingsScreen } from './src/screens/LineLengthSettingsScreen';
 import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
 import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
@@ -76,6 +77,7 @@ export default function App() {
             <Stack.Screen name="Prompt" component={PromptScreen} />
             <Stack.Screen name="PedalSettings" component={PedalSettingsScreen} />
             <Stack.Screen name="VoiceSettings" component={VoiceSettingsScreen} />
+            <Stack.Screen name="LineLengthSettings" component={LineLengthSettingsScreen} />
             <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
           </Stack.Navigator>
         </NavigationContainer>

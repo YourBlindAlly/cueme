@@ -1,9 +1,12 @@
 import type { SectionMarker } from '../types';
+import type { ChordedWord } from './chordedWord';
+import { tokenizeChordedLine } from './chordedWord';
 
 export type ParsedChordProSong = {
   title: string | null;
   key: string | null;
   lines: string[];
+  chordedLines: ChordedWord[][];
   sections: SectionMarker[];
 };
 
@@ -53,6 +56,7 @@ function baseDirectiveName(rawName: string): string {
  */
 export function parseChordPro(rawText: string): ParsedChordProSong {
   const lines: string[] = [];
+  const chordedLines: ChordedWord[][] = [];
   const sections: SectionMarker[] = [];
   let title: string | null = null;
   let key: string | null = null;
@@ -119,8 +123,9 @@ export function parseChordPro(rawText: string): ParsedChordProSong {
     const stripped = trimmed.replace(CHORD_RE, '').trim();
     if (stripped.length > 0) {
       lines.push(stripped);
+      chordedLines.push(tokenizeChordedLine(trimmed));
     }
   }
 
-  return { title, key, lines, sections };
+  return { title, key, lines, chordedLines, sections };
 }

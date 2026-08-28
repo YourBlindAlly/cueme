@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -8,6 +8,13 @@ import { useAppState } from '../state/AppStateContext';
 import { useSpeech } from '../speech/useSpeech';
 import { useAudioInterruptionResume } from '../speech/useAudioInterruptionResume';
 import { loadReduceVoiceOverChatter } from '../speech/voiceOverPreference';
+import {
+  loadLineLengthPreset,
+  wrapOptionsForPreset,
+  type LineLengthPreset,
+} from '../parsing/lineLengthPreference';
+import { loadIncludeChords } from '../parsing/chordsPreference';
+import { wrapChordedSongLines, type LineWrapResult } from '../parsing/wrapLines';
 import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
 
@@ -35,19 +42,29 @@ export function PromptScreen({ navigation }: Props) {
   const { speakNow, stopImmediate, refreshVoicePreference } = useSpeech();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
+  // Both start null (rather than defaulting to a guessed value) so the very
+  // first render never wraps with a wrong guess and then immediately
+  // re-speaks line one once the real saved preferences load — see spokenLines.
+  const [lineLengthPreset, setLineLengthPreset] = useState<LineLengthPreset | null>(null);
+  const [includeChords, setIncludeChords] = useState<boolean | null>(null);
 
   useEffect(() => {
     loadReduceVoiceOverChatter().then(setReduceChatter);
+    loadLineLengthPreset().then(setLineLengthPreset);
+    loadIncludeChords().then(setIncludeChords);
   }, []);
 
   // React Navigation reuses this screen's instance on goBack() rather than
-  // remounting it, so settings changed on VoiceSettings/PedalSettings (voice,
-  // reduce-VO-chatter) would otherwise never reach an already-mounted
-  // PromptScreen until the app fully restarted.
+  // remounting it, so settings changed on VoiceSettings/PedalSettings/Lines
+  // (voice, reduce-VO-chatter, line-length preset, include-chords) would
+  // otherwise never reach an already-mounted PromptScreen until the app
+  // fully restarted.
   useEffect(() => {
     const unsubscribe = navigation.addListener('focus', () => {
       refreshVoicePreference();
       loadReduceVoiceOverChatter().then(setReduceChatter);
+      loadLineLengthPreset().then(setLineLengthPreset);
+      loadIncludeChords().then(setIncludeChords);
     });
     return unsubscribe;
   }, [navigation, refreshVoicePreference]);
@@ -58,24 +75,45 @@ export function PromptScreen({ navigation }: Props) {
     }
   }, [song, navigation]);
 
-  // Speak the first line immediately on load — no "ready, press next" step,
-  // since that state relied on a swipe prompt VoiceOver users couldn't act on
-  // anyway, and there's no real reason to make everyone wait through it.
+  // Re-wrapping is a system-wide preference (not per-song), applied here at
+  // playback time rather than baked into Song.lines, so changing it in
+  // Settings immediately affects every song, including ones already in the
+  // library — not just newly imported ones. Chord position is always a
+  // preferred break point inside wrapChordedSongLines regardless of
+  // includeChords — that flag only controls whether the chord names survive
+  // into the rendered text.
+  const spokenLines = useMemo<LineWrapResult>(() => {
+    if (!song || lineLengthPreset === null || includeChords === null) {
+      return { lines: [], sections: [] };
+    }
+    const options = wrapOptionsForPreset(lineLengthPreset);
+    return wrapChordedSongLines(
+      { chordedLines: song.chordedLines, sections: song.sections },
+      options,
+      includeChords
+    );
+  }, [song, lineLengthPreset, includeChords]);
+
+  // Speak the first line immediately whenever a song loads or the wrapped
+  // lines change (e.g. the line-length preference was changed and we came
+  // back to this screen) — no "ready, press next" step, since that state
+  // relied on a swipe prompt VoiceOver users couldn't act on anyway.
   useEffect(() => {
-    if (song && song.lines.length > 0) {
+    setCurrentIndex(0);
+    if (spokenLines.lines.length > 0) {
       playAdvanceFeedback();
-      speakNow(song.lines[0]);
+      speakNow(spokenLines.lines[0]);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [spokenLines]);
 
   useEffect(() => {
     return () => stopImmediate();
   }, [stopImmediate]);
 
   const goNext = useCallback(() => {
-    if (!song) return;
-    if (currentIndex >= song.lines.length - 1) {
+    if (spokenLines.lines.length === 0) return;
+    if (currentIndex >= spokenLines.lines.length - 1) {
       stopImmediate();
       playEndOfSongFeedback();
       return;
@@ -83,18 +121,18 @@ export function PromptScreen({ navigation }: Props) {
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
     playAdvanceFeedback();
-    speakNow(song.lines[nextIndex]);
-  }, [currentIndex, song, speakNow, stopImmediate]);
+    speakNow(spokenLines.lines[nextIndex]);
+  }, [currentIndex, spokenLines, speakNow, stopImmediate]);
 
   const goPrevious = useCallback(() => {
-    if (!song) {
+    if (spokenLines.lines.length === 0) {
       return;
     }
     const prevIndex = Math.max(0, currentIndex - 1);
     setCurrentIndex(prevIndex);
     playAdvanceFeedback();
-    speakNow(song.lines[prevIndex]);
-  }, [currentIndex, song, speakNow]);
+    speakNow(spokenLines.lines[prevIndex]);
+  }, [currentIndex, spokenLines, speakNow]);
 
   const { isPedalConnected } = usePedalInput({
     onAction: (action) => {
@@ -113,10 +151,10 @@ export function PromptScreen({ navigation }: Props) {
   });
 
   const resumeCurrentLine = useCallback(() => {
-    if (song) {
-      speakNow(song.lines[currentIndex]);
+    if (spokenLines.lines.length > 0) {
+      speakNow(spokenLines.lines[currentIndex]);
     }
-  }, [currentIndex, song, speakNow]);
+  }, [currentIndex, spokenLines, speakNow]);
   useAudioInterruptionResume(resumeCurrentLine);
 
   const flingLeft = Gesture.Fling()
@@ -131,8 +169,8 @@ export function PromptScreen({ navigation }: Props) {
     return <View style={styles.container} />;
   }
 
-  const displayText = song.lines[currentIndex];
-  const isEnded = currentIndex === song.lines.length - 1;
+  const displayText = spokenLines.lines[currentIndex];
+  const isEnded = currentIndex === spokenLines.lines.length - 1;
 
   return (
     <View style={styles.container}>
@@ -157,6 +195,13 @@ export function PromptScreen({ navigation }: Props) {
             onPress={() => navigation.navigate('VoiceSettings')}
           >
             <Text style={styles.exitLink}>Voice</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open line length settings"
+            onPress={() => navigation.navigate('LineLengthSettings')}
+          >
+            <Text style={styles.exitLink}>Lines</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
