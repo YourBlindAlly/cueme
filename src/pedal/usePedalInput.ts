@@ -9,6 +9,7 @@ import {
 } from './bindingsStorage';
 import { resolveAction, setBinding, type KeyBinding, type PedalAction } from './keyBindings';
 import { DoublePressDetector } from './doublePressDetector';
+import { pedalEventBus } from './pedalEventBus';
 
 type Options = {
   /** Called for every key press that resolves to a bound action (ignored while capturing a new binding). */
@@ -61,18 +62,18 @@ export function usePedalInput({
   }, []);
 
   useEffect(() => {
-    const subs = [
-      CuemePedalInput.addListener('onPedalConnected', () => {
+    const unsubscribers = [
+      pedalEventBus.onConnected(() => {
         setIsPedalConnected(true);
         onConnectAlertRef.current?.();
       }),
-      CuemePedalInput.addListener('onPedalDisconnected', () => {
+      pedalEventBus.onDisconnected(() => {
         setIsPedalConnected(false);
         if (alertOnDisconnectRef.current) {
           onDisconnectAlertRef.current?.();
         }
       }),
-      CuemePedalInput.addListener('onKeyEvent', (event: KeyEventPayload) => {
+      pedalEventBus.onKeyEvent((event: KeyEventPayload) => {
         if (!event.isKeyDown) {
           return;
         }
@@ -95,7 +96,7 @@ export function usePedalInput({
         }
       }),
     ];
-    return () => subs.forEach((sub) => sub.remove());
+    return () => unsubscribers.forEach((unsubscribe) => unsubscribe());
   }, []);
 
   const assignBinding = useCallback((action: PedalAction, event: KeyEventPayload) => {
