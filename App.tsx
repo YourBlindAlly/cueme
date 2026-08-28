@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
@@ -64,30 +65,32 @@ export default function App() {
 
   return (
     <GestureHandlerRootView style={styles.root}>
-      <AppStateProvider initialActiveSong={initialSong}>
-        <NavigationContainer theme={darkTheme}>
-          <Stack.Navigator
-            // Always open on the library/song-picker, even if a song was
-            // active last time — dropping straight into a song on load is
-            // for right after picking or pasting one, not for a cold app
-            // launch (Rusty's own distinction, clarified 2026-08-27).
-            initialRouteName="Library"
-            screenOptions={{ headerShown: false }}
-          >
-            <Stack.Screen name="Library" component={LibraryScreen} />
-            <Stack.Screen name="NewSong" component={InputScreen} />
-            <Stack.Screen name="Prompt" component={PromptScreen} />
-            <Stack.Screen name="PedalSettings" component={PedalSettingsScreen} />
-            <Stack.Screen name="VoiceSettings" component={VoiceSettingsScreen} />
-            <Stack.Screen name="LineLengthSettings" component={LineLengthSettingsScreen} />
-            <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
-            <Stack.Screen name="Setlists" component={SetlistsScreen} />
-            <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </AppStateProvider>
-      <CuemePedalCaptureView />
-      <StatusBar style="light" />
+      <SafeAreaProvider>
+        <AppStateProvider initialActiveSong={initialSong}>
+          <NavigationContainer theme={darkTheme}>
+            <Stack.Navigator
+              // Always open on the library/song-picker, even if a song was
+              // active last time — dropping straight into a song on load is
+              // for right after picking or pasting one, not for a cold app
+              // launch (Rusty's own distinction, clarified 2026-08-27).
+              initialRouteName="Library"
+              screenOptions={{ headerShown: false }}
+            >
+              <Stack.Screen name="Library" component={LibraryScreen} />
+              <Stack.Screen name="NewSong" component={InputScreen} />
+              <Stack.Screen name="Prompt" component={PromptScreen} />
+              <Stack.Screen name="PedalSettings" component={PedalSettingsScreen} />
+              <Stack.Screen name="VoiceSettings" component={VoiceSettingsScreen} />
+              <Stack.Screen name="LineLengthSettings" component={LineLengthSettingsScreen} />
+              <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
+              <Stack.Screen name="Setlists" component={SetlistsScreen} />
+              <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </AppStateProvider>
+        <CuemePedalCaptureView />
+        <StatusBar style="light" />
+      </SafeAreaProvider>
     </GestureHandlerRootView>
   );
 }

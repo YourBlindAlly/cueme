@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { pickAndImportLocalFile } from '../library/importLocalFile';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 import type { Song } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Library'>;
@@ -63,7 +65,7 @@ export function LibraryScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <Text style={styles.heading} accessibilityRole="header">
         Your Songs
       </Text>
@@ -128,6 +130,7 @@ export function LibraryScreen({ navigation }: Props) {
                 <Text style={styles.songSource}>{SOURCE_LABEL[item.source.type]}</Text>
               </Pressable>
               <Pressable
+                hitSlop={LINK_HIT_SLOP}
                 onPress={() => navigation.navigate('NewSong', { editSong: item })}
                 accessibilityRole="button"
                 accessibilityLabel={`Edit ${item.title}`}
@@ -135,6 +138,7 @@ export function LibraryScreen({ navigation }: Props) {
                 <Text style={styles.editLink}>Edit</Text>
               </Pressable>
               <Pressable
+                hitSlop={LINK_HIT_SLOP}
                 onPress={() => handleRemove(item)}
                 accessibilityRole="button"
                 accessibilityLabel={`Remove ${item.title}`}
@@ -145,7 +149,7 @@ export function LibraryScreen({ navigation }: Props) {
           )}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

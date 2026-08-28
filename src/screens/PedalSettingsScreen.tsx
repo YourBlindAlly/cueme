@@ -1,9 +1,11 @@
 import React from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { usePedalInput } from '../pedal/usePedalInput';
 import type { PedalAction } from '../pedal/keyBindings';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'PedalSettings'>;
 
@@ -44,11 +46,12 @@ export function PedalSettingsScreen({ navigation }: Props) {
     bindings.filter((b) => b.action === action);
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-      <View style={styles.headerRow}>
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
-          <Text style={styles.backLink}>Back</Text>
-        </Pressable>
+    <SafeAreaView style={styles.container} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content}>
+        <View style={styles.headerRow}>
+          <Pressable hitSlop={LINK_HIT_SLOP} onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
         <Text style={styles.heading} accessibilityRole="header">
           Pedal &amp; Controls
         </Text>
@@ -68,6 +71,7 @@ export function PedalSettingsScreen({ navigation }: Props) {
             <View style={styles.captureRow}>
               <Text style={styles.capturingText}>Waiting for a press…</Text>
               <Pressable
+                hitSlop={LINK_HIT_SLOP}
                 onPress={handleCancelCapture}
                 accessibilityRole="button"
                 accessibilityLabel={`Cancel assigning ${ACTION_LABELS[action]}`}
@@ -94,6 +98,7 @@ export function PedalSettingsScreen({ navigation }: Props) {
         <Switch value={alertOnDisconnect} onValueChange={setAlertOnDisconnect} />
       </View>
     </ScrollView>
+    </SafeAreaView>
   );
 }
 
@@ -101,6 +106,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#000',
+  },
+  scroll: {
+    flex: 1,
   },
   content: {
     padding: 20,

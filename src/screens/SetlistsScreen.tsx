@@ -1,10 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { listSetlists, loadSetlist, type SetlistSummary } from '../setlist/setlistStorage';
 import { isDropboxConfigured } from '../cloud/dropbox/dropboxAuth';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Setlists'>;
 
@@ -55,9 +57,14 @@ export function SetlistsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back">
+        <Pressable
+          hitSlop={LINK_HIT_SLOP}
+          onPress={() => navigation.goBack()}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
         <Text style={styles.heading} accessibilityRole="header">
@@ -88,6 +95,7 @@ export function SetlistsScreen({ navigation }: Props) {
                 of {activeSetlist.setlist.entries.length}
               </Text>
               <Pressable
+                hitSlop={LINK_HIT_SLOP}
                 onPress={() => clearSetlist()}
                 accessibilityRole="button"
                 accessibilityLabel="Stop following this setlist"
@@ -125,7 +133,7 @@ export function SetlistsScreen({ navigation }: Props) {
           )}
         </>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

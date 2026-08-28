@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import type { Voice } from 'expo-speech';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,6 +10,7 @@ import {
   loadReduceVoiceOverChatter,
   saveReduceVoiceOverChatter,
 } from '../speech/voiceOverPreference';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'VoiceSettings'>;
 
@@ -57,9 +59,9 @@ export function VoiceSettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
+        <Pressable hitSlop={LINK_HIT_SLOP} onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
         <Text style={styles.heading} accessibilityRole="header">
@@ -126,7 +128,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
           );
         }}
       />
-    </View>
+    </SafeAreaView>
   );
 }
 

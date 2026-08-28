@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import {
@@ -10,6 +11,7 @@ import {
   type LineLengthPreset,
 } from '../parsing/lineLengthPreference';
 import { loadIncludeChords, saveIncludeChords } from '../parsing/chordsPreference';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LineLengthSettings'>;
 
@@ -45,9 +47,9 @@ export function LineLengthSettingsScreen({ navigation }: Props) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
+        <Pressable hitSlop={LINK_HIT_SLOP} onPress={onBack} accessibilityRole="button" accessibilityLabel="Back">
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
         <Text style={styles.heading} accessibilityRole="header">
@@ -93,7 +95,7 @@ export function LineLengthSettingsScreen({ navigation }: Props) {
           </Pressable>
         );
       })}
-    </View>
+    </SafeAreaView>
   );
 }
 

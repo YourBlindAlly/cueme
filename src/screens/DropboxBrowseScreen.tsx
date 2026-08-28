@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import * as AuthSession from 'expo-auth-session';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
@@ -12,6 +13,7 @@ import {
   type DropboxEntry,
 } from '../cloud/dropbox/dropboxApi';
 import { buildSongFromFile } from '../parsing/buildSong';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DropboxBrowse'>;
 
@@ -146,7 +148,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
 
   if (!isDropboxConfigured) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Text style={styles.heading} accessibilityRole="header">
           Dropbox
         </Text>
@@ -161,7 +163,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         <Text style={styles.infoText}>
           Then give me the app key and I'll wire it in.
         </Text>
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -175,7 +177,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
 
   if (!isConnected) {
     return (
-      <View style={styles.container}>
+      <SafeAreaView style={styles.container} edges={['top']}>
         <Text style={styles.heading} accessibilityRole="header">
           Dropbox
         </Text>
@@ -187,12 +189,12 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         >
           <Text style={styles.connectButtonText}>Connect Dropbox</Text>
         </Pressable>
-      </View>
+      </SafeAreaView>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
         <Text style={styles.heading} accessibilityRole="header">
           {path ? path.split('/').pop() : 'Dropbox'}
@@ -200,6 +202,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         <View style={styles.headerButtons}>
           {files.length > 0 && (
             <Pressable
+              hitSlop={LINK_HIT_SLOP}
               onPress={handleToggleSelectMode}
               accessibilityRole="button"
               accessibilityLabel={isSelectMode ? 'Cancel selecting songs' : 'Select multiple songs to import'}
@@ -208,6 +211,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
             </Pressable>
           )}
           <Pressable
+            hitSlop={LINK_HIT_SLOP}
             onPress={disconnect}
             accessibilityRole="button"
             accessibilityLabel="Disconnect Dropbox"
@@ -222,6 +226,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
       {isSelectMode && (
         <View style={styles.selectBar}>
           <Pressable
+            hitSlop={LINK_HIT_SLOP}
             onPress={handleSelectAll}
             accessibilityRole="button"
             accessibilityLabel={
@@ -288,7 +293,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
           }}
         />
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

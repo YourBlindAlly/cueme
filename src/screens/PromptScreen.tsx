@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useKeepAwake } from 'expo-keep-awake';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useIsFocused } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { useSpeech } from '../speech/useSpeech';
@@ -17,6 +19,7 @@ import { loadIncludeChords } from '../parsing/chordsPreference';
 import { wrapChordedSongLines, type LineWrapResult } from '../parsing/wrapLines';
 import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
+import { ROW_LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Prompt'>;
 
@@ -40,6 +43,19 @@ export function PromptScreen({ navigation }: Props) {
   useKeepAwake(undefined, { suppressDeactivateWarnings: true });
   const { activeSong: song, activeSetlist, advanceSetlist } = useAppState();
   const { speakNow, stopImmediate, refreshVoicePreference } = useSpeech();
+  // React Navigation is supposed to fully unmount a screen once it's popped
+  // off the stack, but Rusty found a real, reproducible case where that
+  // doesn't happen cleanly: loading N different songs in a row caused each
+  // song's first line to be spoken N times, growing by one per song loaded —
+  // exactly what you'd hear if N still-alive-but-backgrounded PromptScreen
+  // instances all independently reacted to the same shared "active song
+  // changed" context update. isFocusedRef gates every place this screen
+  // produces speech or reacts to pedal input, so a backgrounded instance
+  // (however it ended up alive) stays silent no matter what shared state
+  // changes around it — only the one instance actually on screen acts.
+  const isFocused = useIsFocused();
+  const isFocusedRef = useRef(isFocused);
+  isFocusedRef.current = isFocused;
   const [currentIndex, setCurrentIndex] = useState(0);
   const [reduceChatter, setReduceChatter] = useState(false);
   // Both start null (rather than defaulting to a guessed value) so the very
@@ -100,7 +116,7 @@ export function PromptScreen({ navigation }: Props) {
   // relied on a swipe prompt VoiceOver users couldn't act on anyway.
   useEffect(() => {
     setCurrentIndex(0);
-    if (spokenLines.lines.length > 0) {
+    if (isFocusedRef.current && spokenLines.lines.length > 0) {
       playAdvanceFeedback();
       speakNow(spokenLines.lines[0]);
     }
@@ -136,6 +152,7 @@ export function PromptScreen({ navigation }: Props) {
 
   const { isPedalConnected } = usePedalInput({
     onAction: (action) => {
+      if (!isFocusedRef.current) return;
       if (action === 'next') {
         goNext();
       } else {
@@ -146,18 +163,21 @@ export function PromptScreen({ navigation }: Props) {
     // top of the single-press line-advance above, which already fired for
     // both presses; a no-op if no setlist is currently active.
     onDoubleAction: (action) => {
+      if (!isFocusedRef.current) return;
       void advanceSetlist(action);
     },
     onDisconnectAlert: () => {
+      if (!isFocusedRef.current) return;
       speakNow('Pedal disconnected. Using on-screen buttons.');
     },
     onConnectAlert: () => {
+      if (!isFocusedRef.current) return;
       speakNow('Pedal connected.');
     },
   });
 
   const resumeCurrentLine = useCallback(() => {
-    if (spokenLines.lines.length > 0) {
+    if (isFocusedRef.current && spokenLines.lines.length > 0) {
       speakNow(spokenLines.lines[currentIndex]);
     }
   }, [currentIndex, spokenLines, speakNow]);
@@ -172,20 +192,19 @@ export function PromptScreen({ navigation }: Props) {
   const screenSwipe = Gesture.Race(flingLeft, flingRight);
 
   if (!song) {
-    return <View style={styles.container} />;
+    return <SafeAreaView style={styles.container} edges={['top']} />;
   }
 
   const displayText = spokenLines.lines[currentIndex];
   const isEnded = currentIndex === spokenLines.lines.length - 1;
 
   return (
-    // accessibilityViewIsModal keeps VoiceOver's swipe-navigation focus
-    // confined to this screen's own elements — without it, a swipe here can
-    // wander VoiceOver's focus into OS chrome (the status bar) instead of
-    // just moving between this screen's elements, which is what Rusty
-    // reported (status bar time/wifi getting read mid-swipe, not near the
-    // top of the screen).
-    <View style={styles.container} accessibilityViewIsModal>
+    // edges={['top']} keeps header content (and its small link buttons)
+    // clear of the notch/status bar area — without it nothing in this app
+    // accounts for the safe area at all, so a reaching finger hunting for a
+    // small top-row button has very little room before crossing into actual
+    // system chrome (Rusty's real report, 2026-08-28).
+    <SafeAreaView style={styles.container} edges={['top']} accessibilityViewIsModal>
       <View style={styles.header}>
         <View style={styles.headerTextBlock}>
           <Text style={styles.songTitle} numberOfLines={1}>
@@ -201,6 +220,7 @@ export function PromptScreen({ navigation }: Props) {
         </View>
         <View style={styles.headerLinks}>
           <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel={
               isPedalConnected ? 'Pedal connected. Open pedal settings' : 'Open pedal settings'
@@ -210,6 +230,7 @@ export function PromptScreen({ navigation }: Props) {
             <Text style={styles.exitLink}>{isPedalConnected ? 'Pedal ●' : 'Controls'}</Text>
           </Pressable>
           <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Open voice settings"
             onPress={() => navigation.navigate('VoiceSettings')}
@@ -217,6 +238,7 @@ export function PromptScreen({ navigation }: Props) {
             <Text style={styles.exitLink}>Voice</Text>
           </Pressable>
           <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Open line length settings"
             onPress={() => navigation.navigate('LineLengthSettings')}
@@ -224,6 +246,7 @@ export function PromptScreen({ navigation }: Props) {
             <Text style={styles.exitLink}>Lines</Text>
           </Pressable>
           <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Edit this song's lyrics"
             onPress={() => navigation.navigate('NewSong', { editSong: song })}
@@ -231,6 +254,7 @@ export function PromptScreen({ navigation }: Props) {
             <Text style={styles.exitLink}>Edit</Text>
           </Pressable>
           <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
             accessibilityLabel="Load a different song"
             onPress={() => navigation.navigate('Library')}
@@ -269,7 +293,7 @@ export function PromptScreen({ navigation }: Props) {
           <Text style={styles.touchStripLabel}>Next ›</Text>
         </Pressable>
       </View>
-    </View>
+    </SafeAreaView>
   );
 }
 
