@@ -15,6 +15,9 @@ on:
 env:
   CI: true
 
+permissions:
+  contents: write
+
 jobs:
   build:
     # macos-15's Xcode tops out at 26.3, which fails to compile
@@ -73,3 +76,24 @@ jobs:
           name: CueMe-unsigned-ipa
           path: CueMe-unsigned.ipa
           retention-days: 30
+
+      # Workflow artifacts (above) require a logged-in GitHub session to
+      # download, which is awkward from a phone's browser. A GitHub Release
+      # asset is a plain public URL that Safari can download directly, then
+      # hand to SideStore/SideInstaller via the share sheet — no computer, no
+      # GitHub login, needed. "latest-build" is a single rolling tag/release
+      # that gets replaced on every push, so this URL never changes and can
+      # be bookmarked once:
+      # https://github.com/<owner>/<repo>/releases/download/latest-build/CueMe-unsigned.ipa
+      - name: Publish to the rolling "latest-build" release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest-build --yes --repo "${{ github.repository }}" || true
+          git tag -f latest-build
+          git push -f origin latest-build
+          gh release create latest-build CueMe-unsigned.ipa \
+            --repo "${{ github.repository }}" \
+            --title "Latest unsigned build" \
+            --notes "Automatically published from commit ${{ github.sha }}. Unsigned — install via SideStore/SideInstaller, which applies its own free-Apple-ID signature." \
+            --latest
