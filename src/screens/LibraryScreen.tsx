@@ -1,10 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { pickAndImportLocalFile } from '../library/importLocalFile';
+import {
+  DEFAULT_SORT_MODE,
+  loadLibrarySortMode,
+  nextSortMode,
+  saveLibrarySortMode,
+  SORT_MODE_LABEL,
+} from '../library/librarySortPreference';
+import { sortLibraryForDisplay } from '../library/sortLibrary';
 import type { Song } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Library'>;
@@ -18,6 +26,27 @@ const SOURCE_LABEL: Record<Song['source']['type'], string> = {
 export function LibraryScreen({ navigation }: Props) {
   const { library, isLibraryLoaded, loadSong, removeFromLibrary } = useAppState();
   const [isImporting, setIsImporting] = useState(false);
+  const [sortMode, setSortMode] = useState(DEFAULT_SORT_MODE);
+
+  useEffect(() => {
+    loadLibrarySortMode().then(setSortMode);
+  }, []);
+
+  const handleCycleSort = () => {
+    setSortMode((current) => {
+      const next = nextSortMode(current);
+      void saveLibrarySortMode(next);
+      return next;
+    });
+  };
+
+  // 'newest' relies on `library` already arriving newest-first from
+  // upsertLibrarySong/loadLibrary — sortLibraryForDisplay leaves that order
+  // untouched and only actually re-sorts for the other two modes.
+  const sortedLibrary = useMemo(
+    () => sortLibraryForDisplay(library, sortMode),
+    [library, sortMode]
+  );
 
   // Plain navigate (not popTo) is correct here specifically because Library
   // is always the root screen when this fires — every "return to Library"
@@ -116,13 +145,24 @@ export function LibraryScreen({ navigation }: Props) {
         </Pressable>
       </View>
 
+      {isLibraryLoaded && library.length > 0 ? (
+        <Pressable
+          style={styles.sortButton}
+          onPress={handleCycleSort}
+          accessibilityRole="button"
+          accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}. Tap to change.`}
+        >
+          <Text style={styles.sortButtonText}>Sort: {SORT_MODE_LABEL[sortMode]}</Text>
+        </Pressable>
+      ) : null}
+
       {isLibraryLoaded && library.length === 0 ? (
         <Text style={styles.emptyText}>
           No songs yet. Paste one, import a file, or connect Dropbox to get started.
         </Text>
       ) : (
         <FlatList
-          data={library}
+          data={sortedLibrary}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
             <Pressable
@@ -196,6 +236,19 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 15,
     marginTop: 12,
+  },
+  sortButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#1c1c1c',
+    borderRadius: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginBottom: 12,
+  },
+  sortButtonText: {
+    color: '#4f8cff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   songRow: {
     backgroundColor: '#1c1c1c',
