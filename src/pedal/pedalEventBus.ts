@@ -23,12 +23,29 @@ import type {
  * the native/Expo bridge's own listener bookkeeping being leak-proof across
  * every possible lifecycle edge case.
  */
+/**
+ * A physical pedal press should never register as two "key down" events this
+ * close together — the pedal's own hardware auto-repeat (a HID keyboard
+ * convention: holding a key resends key-down while it's still pressed) and
+ * the fact that this module runs TWO separate native key-delivery paths at
+ * once (GCKeyboard's keyChangedHandler, kept for pedals it does work for, and
+ * PedalKeyCaptureView's pressesBegan fallback, which is what actually
+ * delivers events for Rusty's own pedal — see CuemePedalInputModule.swift)
+ * are both plausible sources of a spurious second "down" for one real press.
+ * Deliberately well under DOUBLE_PRESS_WINDOW_MS (400ms) so a genuine fast
+ * double-press to jump setlist songs still passes both real presses through
+ * untouched — this only swallows a second down edge that arrives too fast to
+ * be a human's second stomp.
+ */
+const DUPLICATE_KEYDOWN_WINDOW_MS = 120;
+
 class PedalEventBus {
   private keyEventListeners = new Set<(event: KeyEventPayload) => void>();
   private connectedListeners = new Set<() => void>();
   private disconnectedListeners = new Set<() => void>();
   private interruptionEndedListeners = new Set<(event: AudioInterruptionEndedPayload) => void>();
   private started = false;
+  private lastKeyDownAt = new Map<number, number>();
 
   private ensureStarted() {
     if (this.started) {
@@ -36,6 +53,19 @@ class PedalEventBus {
     }
     this.started = true;
     CuemePedalInput.addListener('onKeyEvent', (event: KeyEventPayload) => {
+      if (event.isKeyDown) {
+        const now = Date.now();
+        const last = this.lastKeyDownAt.get(event.keyCode);
+        if (last !== undefined && now - last < DUPLICATE_KEYDOWN_WINDOW_MS) {
+          // Reported 2026-08-29: lines repeating (sometimes overlapping)
+          // during setlist playback, most likely this exact duplicate-
+          // delivery pattern surfacing more often under longer, more
+          // continuous pedal use. Swallow the duplicate at this single
+          // fan-out point rather than in every consumer.
+          return;
+        }
+        this.lastKeyDownAt.set(event.keyCode, now);
+      }
       this.keyEventListeners.forEach((listener) => listener(event));
     });
     CuemePedalInput.addListener('onPedalConnected', () => {
