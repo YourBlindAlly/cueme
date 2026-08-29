@@ -17,10 +17,22 @@ async function saveLibrary(songs: Song[]): Promise<void> {
   await AsyncStorage.setItem(LIBRARY_KEY, JSON.stringify(songs));
 }
 
-/** Adds a song, or replaces an existing entry with the same id. */
+/**
+ * Adds a song, or replaces an existing entry that's really the same song —
+ * either the same internal id, or (for a Dropbox-sourced song) the same
+ * Dropbox path. Every import gets a fresh random id (see buildSong.ts), so
+ * matching on id alone would let re-importing the same Dropbox file (e.g.
+ * after a parsing fix changed how it comes out) add a second, stale-content
+ * entry alongside the original instead of replacing it.
+ */
 export async function upsertLibrarySong(song: Song): Promise<Song[]> {
   const current = await loadLibrary();
-  const next = [song, ...current.filter((s) => s.id !== song.id)];
+  const isSameSong = (existing: Song) =>
+    existing.id === song.id ||
+    (song.source.type === 'dropbox' &&
+      existing.source.type === 'dropbox' &&
+      existing.source.path === song.source.path);
+  const next = [song, ...current.filter((s) => !isSameSong(s))];
   await saveLibrary(next);
   return next.sort((a, b) => b.addedAt - a.addedAt);
 }
