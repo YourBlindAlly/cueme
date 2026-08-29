@@ -55,7 +55,12 @@ export function useDropboxAuth() {
       redirectUri,
       usePKCE: true,
       responseType: AuthSession.ResponseType.Code,
-      scopes: ['files.metadata.read', 'files.content.read'],
+      // files.content.write was never requested until the setlist feature
+      // needed to actually save a file (uploadDropboxFile) — before this,
+      // no token this app could ever obtain carried write access, no matter
+      // what was enabled in the Dropbox App Console, since the console only
+      // controls what CAN be requested, not what actually gets asked for.
+      scopes: ['files.metadata.read', 'files.content.read', 'files.content.write'],
       extraParams: { token_access_type: 'offline' },
     },
     DROPBOX_DISCOVERY

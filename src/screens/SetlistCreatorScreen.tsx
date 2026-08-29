@@ -7,7 +7,7 @@ import { useAppState } from '../state/AppStateContext';
 import { saveSetlist } from '../setlist/setlistStorage';
 import type { SetlistEntry } from '../setlist/setlistCsv';
 import type { Song } from '../types';
-import { LINK_HIT_SLOP, ROW_LINK_HIT_SLOP } from '../ui/hitSlop';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SetlistCreator'>;
 
@@ -125,42 +125,49 @@ export function SetlistCreatorScreen({ navigation }: Props) {
         {entries.length === 0 ? (
           <Text style={styles.emptyText}>Nothing added yet — pick songs from the list below.</Text>
         ) : (
-          entries.map((entry, index) => (
-            <View key={`${entry.path || entry.title}-${index}`} style={styles.entryRow}>
-              <Text style={styles.entryPosition}>{index + 1}.</Text>
-              <Text style={styles.entryTitle} numberOfLines={1}>
-                {entry.title}
-              </Text>
+          entries.map((entry, index) => {
+            const canMoveUp = index > 0;
+            const canMoveDown = index < entries.length - 1;
+            // Same VoiceOver custom-actions pattern as the Library screen's
+            // rows: one focusable stop per entry instead of four, swipe up
+            // or down to reach Move Up / Move Down / Remove. Only offering
+            // the moves that are actually valid at each position (no "Move
+            // Up" on the first entry, etc.) rather than a disabled action.
+            const actions = [
+              ...(canMoveUp ? [{ name: 'moveUp', label: 'Move Up' }] : []),
+              ...(canMoveDown ? [{ name: 'moveDown', label: 'Move Down' }] : []),
+              { name: 'remove', label: 'Remove' },
+            ];
+            return (
               <Pressable
-                hitSlop={ROW_LINK_HIT_SLOP}
-                onPress={() => handleMove(index, -1)}
-                disabled={index === 0}
+                key={`${entry.path || entry.title}-${index}`}
+                style={styles.entryRow}
+                onPress={() => {}}
                 accessibilityRole="button"
-                accessibilityLabel={`Move ${entry.title} up`}
+                accessibilityLabel={`${index + 1}. ${entry.title}`}
+                accessibilityHint="Swipe up or down for move and remove actions."
+                accessibilityActions={actions}
+                onAccessibilityAction={(event) => {
+                  switch (event.nativeEvent.actionName) {
+                    case 'moveUp':
+                      handleMove(index, -1);
+                      break;
+                    case 'moveDown':
+                      handleMove(index, 1);
+                      break;
+                    case 'remove':
+                      handleRemove(index);
+                      break;
+                  }
+                }}
               >
-                <Text style={[styles.moveLink, index === 0 && styles.linkDisabled]}>Up</Text>
-              </Pressable>
-              <Pressable
-                hitSlop={ROW_LINK_HIT_SLOP}
-                onPress={() => handleMove(index, 1)}
-                disabled={index === entries.length - 1}
-                accessibilityRole="button"
-                accessibilityLabel={`Move ${entry.title} down`}
-              >
-                <Text style={[styles.moveLink, index === entries.length - 1 && styles.linkDisabled]}>
-                  Down
+                <Text style={styles.entryPosition}>{index + 1}.</Text>
+                <Text style={styles.entryTitle} numberOfLines={1}>
+                  {entry.title}
                 </Text>
               </Pressable>
-              <Pressable
-                hitSlop={ROW_LINK_HIT_SLOP}
-                onPress={() => handleRemove(index)}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${entry.title} from setlist`}
-              >
-                <Text style={styles.removeLink}>Remove</Text>
-              </Pressable>
-            </View>
-          ))
+            );
+          })
         )}
       </View>
 
@@ -269,17 +276,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 15,
     flex: 1,
-  },
-  moveLink: {
-    color: '#4f8cff',
-    fontSize: 13,
-  },
-  linkDisabled: {
-    color: '#3a3a3a',
-  },
-  removeLink: {
-    color: '#ff6b6b',
-    fontSize: 13,
   },
   saveButton: {
     backgroundColor: '#2f6fed',
