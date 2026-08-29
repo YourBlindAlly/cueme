@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as AuthSession from 'expo-auth-session';
@@ -14,6 +14,13 @@ import {
 } from '../cloud/dropbox/dropboxApi';
 import { buildSongFromFile } from '../parsing/buildSong';
 import { LINK_HIT_SLOP } from '../ui/hitSlop';
+import { nextSortMode, SORT_MODE_LABEL } from '../library/librarySortPreference';
+import {
+  DEFAULT_DROPBOX_SORT_MODE,
+  loadDropboxSortMode,
+  saveDropboxSortMode,
+} from '../cloud/dropbox/dropboxSortPreference';
+import { sortDropboxEntriesForDisplay } from '../cloud/dropbox/sortDropboxEntries';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'DropboxBrowse'>;
 
@@ -30,7 +37,20 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   const [importProgress, setImportProgress] = useState<{ done: number; total: number } | null>(
     null
   );
+  const [sortMode, setSortMode] = useState(DEFAULT_DROPBOX_SORT_MODE);
   const redirectUri = AuthSession.makeRedirectUri({ scheme: 'cueme', path: 'redirect' });
+
+  useEffect(() => {
+    loadDropboxSortMode().then(setSortMode);
+  }, []);
+
+  const handleCycleSort = () => {
+    setSortMode((current) => {
+      const next = nextSortMode(current);
+      void saveDropboxSortMode(next);
+      return next;
+    });
+  };
 
   useEffect(() => {
     if (!isConnected) {
@@ -101,6 +121,10 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   };
 
   const files = (entries ?? []).filter((e) => !e.isFolder);
+  const sortedEntries = useMemo(
+    () => sortDropboxEntriesForDisplay(entries ?? [], sortMode),
+    [entries, sortMode]
+  );
 
   const handleToggleSelectMode = () => {
     setIsSelectMode((current) => !current);
@@ -234,6 +258,16 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
           {files.length > 0 && (
             <Pressable
               hitSlop={LINK_HIT_SLOP}
+              onPress={handleCycleSort}
+              accessibilityRole="button"
+              accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}. Tap to change.`}
+            >
+              <Text style={styles.selectLink}>Sort: {SORT_MODE_LABEL[sortMode]}</Text>
+            </Pressable>
+          )}
+          {files.length > 0 && (
+            <Pressable
+              hitSlop={LINK_HIT_SLOP}
               onPress={handleToggleSelectMode}
               accessibilityRole="button"
               accessibilityLabel={isSelectMode ? 'Cancel selecting songs' : 'Select multiple songs to import'}
@@ -293,7 +327,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
         <ActivityIndicator color="#fff" style={styles.spinner} />
       ) : (
         <FlatList
-          data={entries ?? []}
+          data={sortedEntries}
           keyExtractor={(item) => item.path}
           ListEmptyComponent={<Text style={styles.emptyText}>Nothing here.</Text>}
           renderItem={({ item }) => {
@@ -361,8 +395,10 @@ const styles = StyleSheet.create({
   },
   headerButtons: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: 18,
+    justifyContent: 'flex-end',
+    gap: 12,
   },
   selectLink: {
     color: '#4f8cff',

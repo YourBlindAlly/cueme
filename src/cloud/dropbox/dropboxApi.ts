@@ -7,6 +7,8 @@ export type DropboxEntry = {
   name: string;
   path: string;
   isFolder: boolean;
+  /** ISO 8601 timestamp — undefined for folders, which Dropbox doesn't report a modified time for. */
+  modifiedAt?: string;
 };
 
 async function authorizedFetch(url: string, init: RequestInit): Promise<Response> {
@@ -50,13 +52,18 @@ export async function listDropboxFolder(
     throw err;
   }
   const data = (await res.json()) as {
-    entries: { '.tag': string; name: string; path_lower: string }[];
+    entries: { '.tag': string; name: string; path_lower: string; server_modified?: string }[];
   };
   return data.entries
     .filter(
       (e) => e['.tag'] === 'folder' || extensions.some((ext) => e.name.toLowerCase().endsWith(ext))
     )
-    .map((e) => ({ name: e.name, path: e.path_lower, isFolder: e['.tag'] === 'folder' }))
+    .map((e) => ({
+      name: e.name,
+      path: e.path_lower,
+      isFolder: e['.tag'] === 'folder',
+      modifiedAt: e.server_modified,
+    }))
     .sort((a, b) => {
       if (a.isFolder !== b.isFolder) return a.isFolder ? -1 : 1;
       return a.name.localeCompare(b.name);
