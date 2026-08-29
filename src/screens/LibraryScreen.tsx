@@ -5,7 +5,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { pickAndImportLocalFile } from '../library/importLocalFile';
-import { LINK_HIT_SLOP } from '../ui/hitSlop';
 import type { Song } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Library'>;
@@ -122,35 +121,37 @@ export function LibraryScreen({ navigation }: Props) {
           data={library}
           keyExtractor={(item) => item.id}
           renderItem={({ item }) => (
-            <View style={styles.songRow}>
-              <Pressable
-                style={styles.songInfo}
-                onPress={() => handleOpenSong(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${item.title}, ${SOURCE_LABEL[item.source.type]}`}
-              >
-                <Text style={styles.songTitle} numberOfLines={1}>
-                  {item.title}
-                </Text>
-                <Text style={styles.songSource}>{SOURCE_LABEL[item.source.type]}</Text>
-              </Pressable>
-              <Pressable
-                hitSlop={LINK_HIT_SLOP}
-                onPress={() => navigation.navigate('NewSong', { editSong: item })}
-                accessibilityRole="button"
-                accessibilityLabel={`Edit ${item.title}`}
-              >
-                <Text style={styles.editLink}>Edit</Text>
-              </Pressable>
-              <Pressable
-                hitSlop={LINK_HIT_SLOP}
-                onPress={() => handleRemove(item)}
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${item.title}`}
-              >
-                <Text style={styles.removeLink}>Remove</Text>
-              </Pressable>
-            </View>
+            <Pressable
+              style={styles.songRow}
+              onPress={() => handleOpenSong(item)}
+              accessibilityRole="button"
+              accessibilityLabel={`${item.title}, ${SOURCE_LABEL[item.source.type]}`}
+              accessibilityHint="Double tap to open. Swipe up or down for more actions."
+              // VoiceOver custom actions — swipe up/down while this row has
+              // focus to cycle through Edit/Delete, double-tap to perform
+              // whichever is selected — instead of separate Edit/Remove
+              // buttons that used to cost two extra swipe-stops per song
+              // just to move from one song to the next.
+              accessibilityActions={[
+                { name: 'edit', label: 'Edit' },
+                { name: 'delete', label: 'Delete' },
+              ]}
+              onAccessibilityAction={(event) => {
+                switch (event.nativeEvent.actionName) {
+                  case 'edit':
+                    navigation.navigate('NewSong', { editSong: item });
+                    break;
+                  case 'delete':
+                    handleRemove(item);
+                    break;
+                }
+              }}
+            >
+              <Text style={styles.songTitle} numberOfLines={1}>
+                {item.title}
+              </Text>
+              <Text style={styles.songSource}>{SOURCE_LABEL[item.source.type]}</Text>
+            </Pressable>
           )}
         />
       )}
@@ -193,16 +194,10 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   songRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#1c1c1c',
     borderRadius: 10,
     padding: 14,
     marginBottom: 10,
-  },
-  songInfo: {
-    flex: 1,
   },
   songTitle: {
     color: '#fff',
@@ -213,15 +208,5 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 13,
     marginTop: 2,
-  },
-  editLink: {
-    color: '#4f8cff',
-    fontSize: 14,
-    marginLeft: 12,
-  },
-  removeLink: {
-    color: '#ff6b6b',
-    fontSize: 14,
-    marginLeft: 12,
   },
 });
