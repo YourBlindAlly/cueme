@@ -15,7 +15,7 @@ import {
   wrapOptionsForPreset,
   type LineLengthPreset,
 } from '../parsing/lineLengthPreference';
-import { loadIncludeChords } from '../parsing/chordsPreference';
+import { loadIncludeChords, saveIncludeChords } from '../parsing/chordsPreference';
 import { buildSongAnnouncement } from '../speech/songAnnouncement';
 import { wrapChordedSongLines, type LineWrapResult } from '../parsing/wrapLines';
 import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
@@ -96,6 +96,18 @@ export function PromptScreen({ navigation }: Props) {
       navigation.replace('Library');
     }
   }, [song, navigation]);
+
+  // Moved here from the Line Length settings screen, per Rusty's request —
+  // this is something worth flipping quickly between songs (or mid-
+  // rehearsal), not something that needs a trip into a settings submenu
+  // every time.
+  const handleToggleIncludeChords = () => {
+    setIncludeChords((current) => {
+      const next = !current;
+      void saveIncludeChords(next);
+      return next;
+    });
+  };
 
   // Re-wrapping is a system-wide preference (not per-song), applied here at
   // playback time rather than baked into Song.lines, so changing it in
@@ -267,6 +279,18 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
+            accessibilityLabel={
+              includeChords
+                ? 'Chords: on. Tap to turn off spoken chord names.'
+                : 'Chords: off. Tap to turn on spoken chord names.'
+            }
+            onPress={handleToggleIncludeChords}
+          >
+            <Text style={styles.exitLink}>{includeChords ? 'Chords: On' : 'Chords: Off'}</Text>
+          </Pressable>
+          <Pressable
+            hitSlop={ROW_LINK_HIT_SLOP}
+            accessibilityRole="button"
             accessibilityLabel="Edit this song's lyrics"
             onPress={() => navigation.navigate('NewSong', { editSong: song })}
           >
@@ -349,7 +373,9 @@ const styles = StyleSheet.create({
   },
   headerLinks: {
     flexDirection: 'row',
-    gap: 18,
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 14,
   },
   exitLink: {
     color: '#4f8cff',
