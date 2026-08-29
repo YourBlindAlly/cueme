@@ -16,6 +16,7 @@ import {
   type LineLengthPreset,
 } from '../parsing/lineLengthPreference';
 import { loadIncludeChords } from '../parsing/chordsPreference';
+import { buildSongAnnouncement } from '../speech/songAnnouncement';
 import { wrapChordedSongLines, type LineWrapResult } from '../parsing/wrapLines';
 import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
@@ -56,11 +57,16 @@ export function PromptScreen({ navigation }: Props) {
   const isFocused = useIsFocused();
   const isFocusedRef = useRef(isFocused);
   isFocusedRef.current = isFocused;
-  const [currentIndex, setCurrentIndex] = useState(0);
+  // -1 means "nothing spoken yet" — the very first advance (pedal or touch)
+  // reveals the title/key announcement (index 0 of displayLines below), not
+  // a lyric line; the actual first lyric line is what the press after that
+  // reveals. See the effect below for why this replaced auto-speaking on
+  // load.
+  const [currentIndex, setCurrentIndex] = useState(-1);
   const [reduceChatter, setReduceChatter] = useState(false);
   // Both start null (rather than defaulting to a guessed value) so the very
-  // first render never wraps with a wrong guess and then immediately
-  // re-speaks line one once the real saved preferences load — see spokenLines.
+  // first render never wraps with a wrong guess, only to have displayLines
+  // change again moments later once the real saved preferences load.
   const [lineLengthPreset, setLineLengthPreset] = useState<LineLengthPreset | null>(null);
   const [includeChords, setIncludeChords] = useState<boolean | null>(null);
 
@@ -110,26 +116,34 @@ export function PromptScreen({ navigation }: Props) {
     );
   }, [song, lineLengthPreset, includeChords]);
 
-  // Speak the first line immediately whenever a song loads or the wrapped
-  // lines change (e.g. the line-length preference was changed and we came
-  // back to this screen) — no "ready, press next" step, since that state
-  // relied on a swipe prompt VoiceOver users couldn't act on anyway.
-  useEffect(() => {
-    setCurrentIndex(0);
-    if (isFocusedRef.current && spokenLines.lines.length > 0) {
-      playAdvanceFeedback();
-      speakNow(spokenLines.lines[0]);
+  // The title/key announcement is a synthetic "line 0" ahead of the real
+  // lyrics — Rusty relies on hearing the key every time, even for songs he
+  // already knows, so it needs to be something the app's own voice always
+  // says, not left to chance whether VoiceOver happens to read the header.
+  const displayLines = useMemo<string[]>(() => {
+    if (!song || spokenLines.lines.length === 0) {
+      return [];
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spokenLines]);
+    return [buildSongAnnouncement(song.title, song.key), ...spokenLines.lines];
+  }, [song, spokenLines]);
+
+  // Reset to "nothing spoken yet" whenever a song loads or the wrapped lines
+  // change (e.g. the line-length preference changed and we came back to this
+  // screen) — deliberately NOT auto-speaking here. Speaking immediately used
+  // to race against VoiceOver's own "new screen" announcement, each talking
+  // over the other; waiting for the first press (pedal or touch) lets that
+  // announcement finish on its own first, same as Rusty asked for.
+  useEffect(() => {
+    setCurrentIndex(-1);
+  }, [displayLines]);
 
   useEffect(() => {
     return () => stopImmediate();
   }, [stopImmediate]);
 
   const goNext = useCallback(() => {
-    if (spokenLines.lines.length === 0) return;
-    if (currentIndex >= spokenLines.lines.length - 1) {
+    if (displayLines.length === 0) return;
+    if (currentIndex >= displayLines.length - 1) {
       stopImmediate();
       playEndOfSongFeedback();
       return;
@@ -137,18 +151,20 @@ export function PromptScreen({ navigation }: Props) {
     const nextIndex = currentIndex + 1;
     setCurrentIndex(nextIndex);
     playAdvanceFeedback();
-    speakNow(spokenLines.lines[nextIndex]);
-  }, [currentIndex, spokenLines, speakNow, stopImmediate]);
+    speakNow(displayLines[nextIndex]);
+  }, [currentIndex, displayLines, speakNow, stopImmediate]);
 
   const goPrevious = useCallback(() => {
-    if (spokenLines.lines.length === 0) {
+    // currentIndex === -1 means nothing has been spoken yet — nothing to go
+    // back to.
+    if (displayLines.length === 0 || currentIndex < 0) {
       return;
     }
     const prevIndex = Math.max(0, currentIndex - 1);
     setCurrentIndex(prevIndex);
     playAdvanceFeedback();
-    speakNow(spokenLines.lines[prevIndex]);
-  }, [currentIndex, spokenLines, speakNow]);
+    speakNow(displayLines[prevIndex]);
+  }, [currentIndex, displayLines, speakNow]);
 
   const { isPedalConnected } = usePedalInput({
     onAction: (action) => {
@@ -177,10 +193,10 @@ export function PromptScreen({ navigation }: Props) {
   });
 
   const resumeCurrentLine = useCallback(() => {
-    if (isFocusedRef.current && spokenLines.lines.length > 0) {
-      speakNow(spokenLines.lines[currentIndex]);
+    if (isFocusedRef.current && currentIndex >= 0 && displayLines.length > 0) {
+      speakNow(displayLines[currentIndex]);
     }
-  }, [currentIndex, spokenLines, speakNow]);
+  }, [currentIndex, displayLines, speakNow]);
   useAudioInterruptionResume(resumeCurrentLine);
 
   const flingLeft = Gesture.Fling()
@@ -195,8 +211,11 @@ export function PromptScreen({ navigation }: Props) {
     return <SafeAreaView style={styles.container} edges={['top']} />;
   }
 
-  const displayText = spokenLines.lines[currentIndex];
-  const isEnded = currentIndex === spokenLines.lines.length - 1;
+  // Shows the title/key announcement before the first press too (harmless to
+  // display before it's actually spoken) — useful for a sighted person
+  // glancing at the screen to see what's cued up and ready.
+  const displayText = displayLines[Math.max(currentIndex, 0)];
+  const isEnded = currentIndex === displayLines.length - 1;
 
   return (
     // edges={['top']} keeps header content (and its small link buttons)
