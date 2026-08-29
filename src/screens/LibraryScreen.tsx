@@ -74,7 +74,27 @@ export function LibraryScreen({ navigation }: Props) {
         Your Songs
       </Text>
 
+      {/* Ordered by how often each is actually used — Dropbox and Setlists
+          first, Import File last, since it's both the least-used path now
+          that Dropbox works well and the one with a known reliability issue
+          (the system file picker can hang browsing into Google Drive). */}
       <View style={styles.actionsRow}>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('DropboxBrowse')}
+          accessibilityRole="button"
+          accessibilityLabel="Browse Dropbox"
+        >
+          <Text style={styles.actionButtonText}>Dropbox</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionButton}
+          onPress={() => navigation.navigate('Setlists')}
+          accessibilityRole="button"
+          accessibilityLabel="Setlists"
+        >
+          <Text style={styles.actionButtonText}>Setlists</Text>
+        </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => navigation.navigate('NewSong')}
@@ -93,22 +113,6 @@ export function LibraryScreen({ navigation }: Props) {
           <Text style={styles.actionButtonText}>
             {isImporting ? 'Importing…' : 'Import File'}
           </Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('DropboxBrowse')}
-          accessibilityRole="button"
-          accessibilityLabel="Browse Dropbox"
-        >
-          <Text style={styles.actionButtonText}>Dropbox</Text>
-        </Pressable>
-        <Pressable
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('Setlists')}
-          accessibilityRole="button"
-          accessibilityLabel="Setlists"
-        >
-          <Text style={styles.actionButtonText}>Setlists</Text>
         </Pressable>
       </View>
 

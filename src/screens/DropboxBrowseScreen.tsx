@@ -150,9 +150,19 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   if (!isDropboxConfigured) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.heading} accessibilityRole="header">
-          Dropbox
-        </Text>
+        <View style={styles.headerLeft}>
+          <Pressable
+            hitSlop={LINK_HIT_SLOP}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
+          <Text style={styles.heading} accessibilityRole="header">
+            Dropbox
+          </Text>
+        </View>
         <Text style={styles.infoText}>
           Dropbox isn't set up yet. To enable it, create an app at
           dropbox.com/developers/apps, add the files.metadata.read and
@@ -179,9 +189,19 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   if (!isConnected) {
     return (
       <SafeAreaView style={styles.container} edges={['top']}>
-        <Text style={styles.heading} accessibilityRole="header">
-          Dropbox
-        </Text>
+        <View style={styles.headerLeft}>
+          <Pressable
+            hitSlop={LINK_HIT_SLOP}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
+          <Text style={styles.heading} accessibilityRole="header">
+            Dropbox
+          </Text>
+        </View>
         <Pressable
           style={styles.connectButton}
           onPress={handleConnect}
@@ -197,9 +217,19 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Text style={styles.heading} accessibilityRole="header">
-          {path ? path.split('/').pop() : 'Dropbox'}
-        </Text>
+        <View style={[styles.headerLeft, styles.headerLeftNoMargin]}>
+          <Pressable
+            hitSlop={LINK_HIT_SLOP}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
+          <Text style={styles.heading} accessibilityRole="header">
+            {path ? path.split('/').pop() : 'Dropbox'}
+          </Text>
+        </View>
         <View style={styles.headerButtons}>
           {files.length > 0 && (
             <Pressable
@@ -315,6 +345,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 16,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    marginBottom: 16,
+  },
+  headerLeftNoMargin: {
+    marginBottom: 0,
+  },
+  backLink: {
+    color: '#4f8cff',
+    fontSize: 16,
   },
   headerButtons: {
     flexDirection: 'row',
