@@ -11,7 +11,11 @@ import { useSpeech } from '../speech/useSpeech';
 import { useAudioInterruptionResume } from '../speech/useAudioInterruptionResume';
 import { loadReduceVoiceOverChatter } from '../speech/voiceOverPreference';
 import {
+  DEFAULT_LINE_LENGTH_PRESET,
+  LINE_LENGTH_PRESET_LABEL,
   loadLineLengthPreset,
+  nextLineLengthPreset,
+  saveLineLengthPreset,
   wrapOptionsForPreset,
   type LineLengthPreset,
 } from '../parsing/lineLengthPreference';
@@ -105,6 +109,18 @@ export function PromptScreen({ navigation }: Props) {
     setIncludeChords((current) => {
       const next = !current;
       void saveIncludeChords(next);
+      return next;
+    });
+  };
+
+  // Same reasoning as the chords toggle above — cycling in place beats a
+  // trip into a separate settings screen for something worth adjusting
+  // quickly, mid-rehearsal or between songs (Rusty's request, 2026-08-30).
+  // Replaces the old dedicated Line Length settings screen entirely.
+  const handleCycleLineLength = () => {
+    setLineLengthPreset((current) => {
+      const next = nextLineLengthPreset(current ?? DEFAULT_LINE_LENGTH_PRESET);
+      void saveLineLengthPreset(next);
       return next;
     });
   };
@@ -271,10 +287,12 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel="Open line length settings"
-            onPress={() => navigation.navigate('LineLengthSettings')}
+            accessibilityLabel={`Line length: ${LINE_LENGTH_PRESET_LABEL[lineLengthPreset ?? DEFAULT_LINE_LENGTH_PRESET]}. Tap to change.`}
+            onPress={handleCycleLineLength}
           >
-            <Text style={styles.exitLink}>Lines</Text>
+            <Text style={styles.exitLink}>
+              Lines: {LINE_LENGTH_PRESET_LABEL[lineLengthPreset ?? DEFAULT_LINE_LENGTH_PRESET]}
+            </Text>
           </Pressable>
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}

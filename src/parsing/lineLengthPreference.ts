@@ -28,6 +28,19 @@ export async function saveLineLengthPreset(preset: LineLengthPreset): Promise<vo
   await AsyncStorage.setItem(LINE_LENGTH_KEY, preset);
 }
 
+/** Cycles short -> medium -> long -> off -> short, for a single tappable header button (no separate settings screen). */
+export function nextLineLengthPreset(current: LineLengthPreset): LineLengthPreset {
+  const index = VALID_PRESETS.indexOf(current);
+  return VALID_PRESETS[(index + 1) % VALID_PRESETS.length];
+}
+
+export const LINE_LENGTH_PRESET_LABEL: Record<LineLengthPreset, string> = {
+  short: 'Short',
+  medium: 'Medium',
+  long: 'Long',
+  off: 'Off',
+};
+
 /**
  * Resolves a preset to wrap options. 'off' uses caps that no real line will
  * ever hit, so every line comes out as a single unsplit chunk — i.e. spoken
