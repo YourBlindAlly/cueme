@@ -8,9 +8,13 @@
 
 const URL_RE = /https?:\/\/\S+|www\.\S+/i;
 const CAPO_ONLY_RE = /^capo\b/i;
+// A performance-note convention used throughout one of the raw collections
+// ("TIP: play the transposed root chord and add the 5th as necessary") —
+// found in 1000+ files there, none of them a real sung lyric.
+const TIP_RE = /^tip:/i;
 
-/** True if `line` is junk (a stray URL or capo note) rather than real lyric content. */
+/** True if `line` is junk (a stray URL, capo note, or "TIP:" aside) rather than real lyric content. */
 export function isJunkLine(line: string): boolean {
   const trimmed = line.trim();
-  return URL_RE.test(trimmed) || CAPO_ONLY_RE.test(trimmed);
+  return URL_RE.test(trimmed) || CAPO_ONLY_RE.test(trimmed) || TIP_RE.test(trimmed);
 }
