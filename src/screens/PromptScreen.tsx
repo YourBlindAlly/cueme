@@ -381,6 +381,7 @@ export function PromptScreen({ navigation }: Props) {
           onPress={goPrevious}
           accessibilityRole="button"
           accessibilityLabel="Previous line"
+          {...(reduceChatter ? accessibilityTraitsProp(['startsMedia']) : {})}
         >
           <Text style={styles.touchStripLabel}>‹ Previous</Text>
         </Pressable>
@@ -390,6 +391,7 @@ export function PromptScreen({ navigation }: Props) {
           onPress={goNext}
           accessibilityRole="button"
           accessibilityLabel="Next line"
+          {...(reduceChatter ? accessibilityTraitsProp(['startsMedia']) : {})}
         >
           <Text style={styles.touchStripLabel}>Next ›</Text>
         </Pressable>
