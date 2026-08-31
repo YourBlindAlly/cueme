@@ -368,6 +368,30 @@ export function PromptScreen({ navigation }: Props) {
       <GestureDetector gesture={screenSwipe}>
         <View
           style={styles.lineArea}
+          accessible
+          accessibilityRole="adjustable"
+          // A fixed label, not the live lyric text — React Native defaults an
+          // accessible group's label to its children's text content, which
+          // means VoiceOver was re-announcing the new line itself (in its own
+          // voice) every time it changed while focused here, echoing right
+          // on top of CueMe's own TTS reading the same line (Rusty's report,
+          // 2026-08-30/31). A label that never changes gives VoiceOver
+          // nothing new to say on its own — the actual lyric content is
+          // still spoken, just only ever through speakNow, never VoiceOver's
+          // separate voice.
+          accessibilityLabel="Lyrics"
+          // VoiceOver's own adjustable-element convention: swipe up fires
+          // 'increment', swipe down fires 'decrement' — mapped here so up
+          // advances forward (next line) and down goes back, matching that
+          // increment/decrement semantic rather than a screen-position one.
+          accessibilityHint="Swipe up for the next line, down for the previous."
+          onAccessibilityAction={(event) => {
+            if (event.nativeEvent.actionName === 'increment') {
+              goNext();
+            } else if (event.nativeEvent.actionName === 'decrement') {
+              goPrevious();
+            }
+          }}
           {...(reduceChatter ? accessibilityTraitsProp(['startsMedia']) : {})}
         >
           <Text style={styles.lineText}>{displayText}</Text>
