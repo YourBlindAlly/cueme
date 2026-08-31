@@ -214,6 +214,27 @@ export function PromptScreen({ navigation }: Props) {
     speakNow(displayLines[prevIndex]);
   }, [currentIndex, displayLines, speakNow]);
 
+  // Shared by the pedal's double-press, the on-screen song-corner buttons,
+  // and the adjustable "song N of M" text below — every trigger for a
+  // setlist song jump goes through this one place so they all behave
+  // identically (same interrupt, same sound, same announcement).
+  const jumpSetlistSong = useCallback(
+    (direction: 'next' | 'previous') => {
+      if (!isFocusedRef.current || !activeSetlist) return;
+      playSongChangeFeedback();
+      speakNow(direction === 'next' ? 'Next song' : 'Previous song');
+      setlistJumpPendingRef.current = true;
+      void advanceSetlist(direction).then((newSong) => {
+        if (newSong) return; // the effect above will announce it once displayLines updates
+        setlistJumpPendingRef.current = false;
+        if (isFocusedRef.current) {
+          speakNow(direction === 'next' ? 'No more songs in this setlist.' : 'Already at the first song.');
+        }
+      });
+    },
+    [activeSetlist, advanceSetlist, speakNow]
+  );
+
   const { isPedalConnected } = usePedalInput({
     onAction: (action) => {
       if (!isFocusedRef.current) return;
@@ -232,17 +253,7 @@ export function PromptScreen({ navigation }: Props) {
     // "Next/Previous song" rather than let a stale line keep playing while
     // the new song loads in the background (Rusty's report, 2026-08-30).
     onDoubleAction: (action) => {
-      if (!isFocusedRef.current || !activeSetlist) return;
-      playSongChangeFeedback();
-      speakNow(action === 'next' ? 'Next song' : 'Previous song');
-      setlistJumpPendingRef.current = true;
-      void advanceSetlist(action).then((newSong) => {
-        if (newSong) return; // the effect above will announce it once displayLines updates
-        setlistJumpPendingRef.current = false;
-        if (isFocusedRef.current) {
-          speakNow(action === 'next' ? 'No more songs in this setlist.' : 'Already at the first song.');
-        }
-      });
+      jumpSetlistSong(action);
     },
     onDisconnectAlert: () => {
       if (!isFocusedRef.current) return;
@@ -293,7 +304,20 @@ export function PromptScreen({ navigation }: Props) {
             {song.key ? ` — Key of ${song.key}` : ''}
           </Text>
           {activeSetlist ? (
-            <Text style={styles.setlistText} numberOfLines={1}>
+            <Text
+              style={styles.setlistText}
+              numberOfLines={1}
+              accessible
+              accessibilityRole="adjustable"
+              accessibilityHint="Swipe down for the next song, up for the previous."
+              onAccessibilityAction={(event) => {
+                if (event.nativeEvent.actionName === 'decrement') {
+                  jumpSetlistSong('next');
+                } else if (event.nativeEvent.actionName === 'increment') {
+                  jumpSetlistSong('previous');
+                }
+              }}
+            >
               {activeSetlist.setlist.name} — song {activeSetlist.currentIndex + 1} of{' '}
               {activeSetlist.setlist.entries.length}
             </Text>
@@ -403,6 +427,20 @@ export function PromptScreen({ navigation }: Props) {
       </GestureDetector>
 
       <View style={styles.touchStrip}>
+        {activeSetlist ? (
+          <>
+            <Pressable
+              style={styles.touchStripSongSegment}
+              onPress={() => jumpSetlistSong('previous')}
+              accessibilityRole="button"
+              accessibilityLabel="Previous song"
+              {...(reduceChatter ? accessibilityTraitsProp(['startsMedia']) : {})}
+            >
+              <Text style={styles.touchStripSongLabel}>‹‹ Song</Text>
+            </Pressable>
+            <View style={styles.touchStripDivider} />
+          </>
+        ) : null}
         <Pressable
           style={styles.touchStripHalf}
           onPress={goPrevious}
@@ -422,6 +460,20 @@ export function PromptScreen({ navigation }: Props) {
         >
           <Text style={styles.touchStripLabel}>Next ›</Text>
         </Pressable>
+        {activeSetlist ? (
+          <>
+            <View style={styles.touchStripDivider} />
+            <Pressable
+              style={styles.touchStripSongSegment}
+              onPress={() => jumpSetlistSong('next')}
+              accessibilityRole="button"
+              accessibilityLabel="Next song"
+              {...(reduceChatter ? accessibilityTraitsProp(['startsMedia']) : {})}
+            >
+              <Text style={styles.touchStripSongLabel}>Song ››</Text>
+            </Pressable>
+          </>
+        ) : null}
       </View>
     </SafeAreaView>
   );
@@ -499,5 +551,19 @@ const styles = StyleSheet.create({
     color: '#4f8cff',
     fontSize: 20,
     fontWeight: '700',
+  },
+  // Fixed (not flex) width — deliberately narrower "corner" zones flanking
+  // the wider next/prev-line segments in the middle, per Rusty's own layout
+  // description, 2026-08-31. Only rendered at all when a setlist is active.
+  touchStripSongSegment: {
+    width: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  touchStripSongLabel: {
+    color: '#4f8cff',
+    fontSize: 13,
+    fontWeight: '700',
+    textAlign: 'center',
   },
 });
