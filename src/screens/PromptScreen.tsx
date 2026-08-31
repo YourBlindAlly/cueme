@@ -332,20 +332,25 @@ export function PromptScreen({ navigation }: Props) {
           ) : null}
         </View>
         <View style={styles.headerLinks}>
+          {/* Every label in this row is deliberately identical between what's
+              shown on screen and what VoiceOver speaks — they used to diverge
+              (e.g. visible "Library" vs spoken "Load a different song"),
+              which meant a sighted person and Rusty couldn't refer to the
+              same button by the same word. Fixed 2026-08-31 per his request;
+              kept short rather than padding the visible text out to match
+              the old, more descriptive spoken versions. */}
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel={
-              isPedalConnected ? 'Pedal connected. Open pedal settings' : 'Open pedal settings'
-            }
+            accessibilityLabel={isPedalConnected ? 'Pedal: Connected' : 'Pedal: Not Connected'}
             onPress={() => navigation.navigate('PedalSettings')}
           >
-            <Text style={styles.exitLink}>{isPedalConnected ? 'Pedal ●' : 'Controls'}</Text>
+            <Text style={styles.exitLink}>{isPedalConnected ? 'Pedal: Connected' : 'Pedal: Not Connected'}</Text>
           </Pressable>
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel="Open voice settings"
+            accessibilityLabel="Voice"
             onPress={() => navigation.navigate('VoiceSettings')}
           >
             <Text style={styles.exitLink}>Voice</Text>
@@ -353,7 +358,7 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel={`Line length: ${LINE_LENGTH_PRESET_LABEL[lineLengthPreset ?? DEFAULT_LINE_LENGTH_PRESET]}. Tap to change.`}
+            accessibilityLabel={`Lines: ${LINE_LENGTH_PRESET_LABEL[lineLengthPreset ?? DEFAULT_LINE_LENGTH_PRESET]}`}
             onPress={handleCycleLineLength}
           >
             <Text style={styles.exitLink}>
@@ -363,11 +368,7 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel={
-              includeChords
-                ? 'Chords: on. Tap to turn off spoken chord names.'
-                : 'Chords: off. Tap to turn on spoken chord names.'
-            }
+            accessibilityLabel={includeChords ? 'Chords: On' : 'Chords: Off'}
             onPress={handleToggleIncludeChords}
           >
             <Text style={styles.exitLink}>{includeChords ? 'Chords: On' : 'Chords: Off'}</Text>
@@ -375,7 +376,7 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel="Edit this song's lyrics"
+            accessibilityLabel="Edit"
             onPress={() => navigation.navigate('NewSong', { editSong: song })}
           >
             <Text style={styles.exitLink}>Edit</Text>
@@ -383,7 +384,7 @@ export function PromptScreen({ navigation }: Props) {
           <Pressable
             hitSlop={ROW_LINK_HIT_SLOP}
             accessibilityRole="button"
-            accessibilityLabel="Load a different song"
+            accessibilityLabel="Library"
             // popTo (not navigate) — React Navigation 7 changed navigate()
             // to no longer pop back to an existing route by default (that's
             // now popTo's job specifically); plain navigate('Library') was
