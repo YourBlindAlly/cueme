@@ -304,9 +304,15 @@ export function PromptScreen({ navigation }: Props) {
             {song.key ? ` — Key of ${song.key}` : ''}
           </Text>
           {activeSetlist ? (
-            <Text
-              style={styles.setlistText}
-              numberOfLines={1}
+            // A View wrapping the Text, not the accessibility/adjustable
+            // props directly on the Text itself — Text and View share the
+            // same accessibility PROP TYPES, but that doesn't guarantee
+            // identical native behavior, and this exact mechanism was
+            // already proven working on the lyric display (a View). Real
+            // bug: applied directly to a Text, VoiceOver read the hint fine
+            // but the swipe gesture never actually fired onAccessibilityAction
+            // at all (Rusty's report, 2026-08-31).
+            <View
               accessible
               accessibilityRole="adjustable"
               accessibilityHint="Swipe down for the next song, up for the previous."
@@ -318,9 +324,11 @@ export function PromptScreen({ navigation }: Props) {
                 }
               }}
             >
-              {activeSetlist.setlist.name} — song {activeSetlist.currentIndex + 1} of{' '}
-              {activeSetlist.setlist.entries.length}
-            </Text>
+              <Text style={styles.setlistText} numberOfLines={1}>
+                {activeSetlist.setlist.name} — song {activeSetlist.currentIndex + 1} of{' '}
+                {activeSetlist.setlist.entries.length}
+              </Text>
+            </View>
           ) : null}
         </View>
         <View style={styles.headerLinks}>
