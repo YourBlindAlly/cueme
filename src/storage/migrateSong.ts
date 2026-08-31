@@ -1,5 +1,60 @@
 import { tokenizePlainLine } from '../parsing/chordedWord';
+import { parseSong } from '../parsing/parseSong';
+import { parseChordPro } from '../parsing/parseChordPro';
+import { CHORDPRO_EXTENSIONS } from '../parsing/buildSong';
 import type { Song } from '../types';
+
+/**
+ * Whether `song` was originally parsed as ChordPro (vs. plain text), needed
+ * to re-parse it with the matching parser. Dropbox imports keep their real
+ * filename in `source.path`, so the extension is authoritative. Manual
+ * pastes always go through the plain-text parser (InputScreen never routes
+ * pasted text through ChordPro parsing, regardless of its content), so
+ * that's unambiguous too. A local file import (`source.type === 'file'`)
+ * doesn't retain its original filename at all, so there's nothing
+ * authoritative to check — fall back to whether the song's own
+ * already-parsed chordedLines ever contained a real chord, which only a
+ * ChordPro parse would have produced.
+ */
+function wasChordPro(song: Song): boolean {
+  if (song.source.type === 'dropbox') {
+    const ext = (song.source.path.match(/\.[^./]+$/)?.[0] ?? '').toLowerCase();
+    return CHORDPRO_EXTENSIONS.includes(ext);
+  }
+  if (song.source.type === 'manual') {
+    return false;
+  }
+  return song.chordedLines.some((line) => line.some((word) => word.chord !== null));
+}
+
+/**
+ * Re-derives `lines`/`chordedLines`/`sections` from the song's stored
+ * `rawText` using the CURRENT parser, every time a song loads — not just
+ * once at import. Parsing logic keeps improving (junk-line filtering being
+ * the concrete example: the TIP:/URL fixes only ever applied to freshly
+ * imported songs before this, since the parsed-and-filtered result, not the
+ * raw text, is what actually got persisted). `rawText` is kept in storage
+ * specifically to make this possible — see its own doc comment in types.ts.
+ * If re-parsing somehow produces nothing (an edge case, not expected in
+ * practice), the existing already-parsed data is kept rather than losing
+ * the song entirely.
+ */
+function reparse(song: Song): Song {
+  if (wasChordPro(song)) {
+    const parsed = parseChordPro(song.rawText);
+    if (parsed.lines.length === 0) return song;
+    return {
+      ...song,
+      lines: parsed.lines,
+      chordedLines: parsed.chordedLines,
+      sections: parsed.sections,
+      key: song.key ?? parsed.key ?? undefined,
+    };
+  }
+  const parsed = parseSong(song.rawText);
+  if (parsed.lines.length === 0) return song;
+  return { ...song, lines: parsed.lines, chordedLines: parsed.chordedLines, sections: parsed.sections };
+}
 
 /**
  * Fills in fields that didn't exist yet when a Song was persisted to
@@ -14,11 +69,8 @@ import type { Song } from '../types';
  * oldest song (dictated in before this field existed).
  */
 export function migrateSong(song: Song): Song {
-  if (Array.isArray(song.chordedLines)) {
-    return song;
-  }
-  return {
-    ...song,
-    chordedLines: song.lines.map((line) => tokenizePlainLine(line)),
-  };
+  const withChordedLines = Array.isArray(song.chordedLines)
+    ? song
+    : { ...song, chordedLines: song.lines.map((line) => tokenizePlainLine(line)) };
+  return reparse(withChordedLines);
 }
