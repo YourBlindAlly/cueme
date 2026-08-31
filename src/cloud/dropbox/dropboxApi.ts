@@ -82,6 +82,15 @@ export async function uploadDropboxFile(path: string, content: string): Promise<
   });
 }
 
+/** Deletes a file at `path` — Dropbox moves it to its own trash rather than purging it immediately, so this is recoverable from dropbox.com if needed. */
+export async function deleteDropboxFile(path: string): Promise<void> {
+  await authorizedFetch('https://api.dropboxapi.com/2/files/delete_v2', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path }),
+  });
+}
+
 export async function downloadDropboxFile(path: string): Promise<string> {
   const res = await authorizedFetch('https://content.dropboxapi.com/2/files/download', {
     method: 'POST',

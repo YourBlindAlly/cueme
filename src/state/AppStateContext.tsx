@@ -24,8 +24,14 @@ type AppStateValue = {
   activeSetlist: ActiveSetlistState | null;
   /** Loads a setlist, resolves its first available song against the library, and makes it active. */
   startSetlist: (setlist: Setlist) => Promise<{ started: boolean }>;
-  /** Advances to the next/previous song in the active setlist, skipping any entry that no longer resolves. Does nothing if no setlist is active or the edge of the list is reached. */
-  advanceSetlist: (direction: 'next' | 'previous') => Promise<void>;
+  /**
+   * Advances to the next/previous song in the active setlist, skipping any
+   * entry that no longer resolves. Returns the newly-active song, or null if
+   * no setlist is active or the edge of the list is reached (nothing
+   * changed) — callers use this to announce the new song directly rather
+   * than reading back a possibly-stale `activeSong` closure.
+   */
+  advanceSetlist: (direction: 'next' | 'previous') => Promise<Song | null>;
   clearSetlist: () => Promise<void>;
 };
 
@@ -86,9 +92,9 @@ export function AppStateProvider({
   );
 
   const advanceSetlist = useCallback(
-    async (direction: 'next' | 'previous') => {
+    async (direction: 'next' | 'previous'): Promise<Song | null> => {
       if (!activeSetlist) {
-        return;
+        return null;
       }
       const { setlist, currentIndex } = activeSetlist;
       const step = direction === 'next' ? 1 : -1;
@@ -99,11 +105,12 @@ export function AppStateProvider({
           const state: ActiveSetlistState = { setlist, currentIndex: i };
           setActiveSetlistState(state);
           await saveActiveSetlist(state);
-          return;
+          return song;
         }
       }
       // No further resolvable song in that direction (edge of the setlist,
       // or every remaining entry is missing from the library) — stay put.
+      return null;
     },
     [activeSetlist, library, loadSong]
   );

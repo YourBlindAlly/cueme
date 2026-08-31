@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
-import { listSetlists, loadSetlist, type SetlistSummary } from '../setlist/setlistStorage';
+import { deleteSetlist, listSetlists, loadSetlist, type SetlistSummary } from '../setlist/setlistStorage';
 import { isDropboxConfigured } from '../cloud/dropbox/dropboxAuth';
 import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
@@ -55,6 +55,24 @@ export function SetlistsScreen({ navigation }: Props) {
     } finally {
       setIsLoadingOne(false);
     }
+  };
+
+  const handleDelete = (summary: SetlistSummary) => {
+    Alert.alert('Delete setlist', `Delete "${summary.name}"? This can't be undone from the app.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await deleteSetlist(summary);
+            setSetlists((current) => (current ?? []).filter((s) => s.path !== summary.path));
+          } catch (err) {
+            Alert.alert('Delete failed', err instanceof Error ? err.message : String(err));
+          }
+        },
+      },
+    ]);
   };
 
   return (
@@ -114,6 +132,9 @@ export function SetlistsScreen({ navigation }: Props) {
                 // on the row (swipe up/down), the same one-row-many-actions
                 // pattern already used on Library/Setlist Creator rows.
                 const isActive = activeSetlist?.setlist.name === item.name;
+                // Deleting the currently-playing setlist is disallowed here
+                // rather than handled as a special case — stop it first,
+                // then delete, avoids a confusing half-stopped state.
                 return (
                   <Pressable
                     style={styles.setlistRow}
@@ -124,17 +145,26 @@ export function SetlistsScreen({ navigation }: Props) {
                         ? `${item.name}, currently playing, song ${activeSetlist!.currentIndex + 1} of ${activeSetlist!.setlist.entries.length}. Double tap to resume.`
                         : `Play setlist ${item.name}`
                     }
-                    accessibilityHint={isActive ? 'Swipe up or down to stop following this setlist.' : undefined}
-                    accessibilityActions={isActive ? [{ name: 'stop', label: 'Stop Following' }] : undefined}
-                    onAccessibilityAction={
+                    accessibilityHint={
                       isActive
-                        ? (event) => {
-                            if (event.nativeEvent.actionName === 'stop') {
-                              clearSetlist();
-                            }
-                          }
-                        : undefined
+                        ? 'Swipe up or down to stop following this setlist.'
+                        : 'Swipe up or down to delete.'
                     }
+                    accessibilityActions={
+                      isActive
+                        ? [{ name: 'stop', label: 'Stop Following' }]
+                        : [{ name: 'delete', label: 'Delete' }]
+                    }
+                    onAccessibilityAction={(event) => {
+                      switch (event.nativeEvent.actionName) {
+                        case 'stop':
+                          clearSetlist();
+                          break;
+                        case 'delete':
+                          handleDelete(item);
+                          break;
+                      }
+                    }}
                   >
                     <Text style={styles.setlistName}>{item.name}</Text>
                     {isActive ? (

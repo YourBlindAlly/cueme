@@ -1,4 +1,9 @@
-import { downloadDropboxFile, listDropboxFolder, uploadDropboxFile } from '../cloud/dropbox/dropboxApi';
+import {
+  deleteDropboxFile,
+  downloadDropboxFile,
+  listDropboxFolder,
+  uploadDropboxFile,
+} from '../cloud/dropbox/dropboxApi';
 import {
   parseSetlistCsv,
   sanitizeSetlistFilename,
@@ -28,4 +33,8 @@ export async function saveSetlist(setlist: Setlist): Promise<void> {
   const filename = sanitizeSetlistFilename(setlist.name);
   const path = `${SETLISTS_FOLDER}/${filename}`.toLowerCase();
   await uploadDropboxFile(path, serializeSetlistCsv(setlist.entries));
+}
+
+export async function deleteSetlist(summary: SetlistSummary): Promise<void> {
+  await deleteDropboxFile(summary.path);
 }

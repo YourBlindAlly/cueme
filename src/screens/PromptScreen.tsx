@@ -22,7 +22,7 @@ import {
 import { loadIncludeChords, saveIncludeChords } from '../parsing/chordsPreference';
 import { buildSongAnnouncement } from '../speech/songAnnouncement';
 import { wrapChordedSongLines, type LineWrapResult } from '../parsing/wrapLines';
-import { playAdvanceFeedback, playEndOfSongFeedback } from '../feedback/feedback';
+import { playAdvanceFeedback, playEndOfSongFeedback, playSongChangeFeedback } from '../feedback/feedback';
 import { usePedalInput } from '../pedal/usePedalInput';
 import { ROW_LINK_HIT_SLOP } from '../ui/hitSlop';
 
@@ -155,15 +155,35 @@ export function PromptScreen({ navigation }: Props) {
     return [buildSongAnnouncement(song.title, song.key), ...spokenLines.lines];
   }, [song, spokenLines]);
 
+  // Set when a double-press just jumped to a different setlist song, so the
+  // effect below knows this particular displayLines change should announce
+  // itself immediately rather than wait for another press. Using a ref (not
+  // just branching in onDoubleAction's own async callback) avoids a race
+  // between that callback and this effect — whichever fires second would
+  // otherwise clobber the other's idea of where currentIndex should land.
+  const setlistJumpPendingRef = useRef(false);
+
   // Reset to "nothing spoken yet" whenever a song loads or the wrapped lines
   // change (e.g. the line-length preference changed and we came back to this
-  // screen) — deliberately NOT auto-speaking here. Speaking immediately used
-  // to race against VoiceOver's own "new screen" announcement, each talking
-  // over the other; waiting for the first press (pedal or touch) lets that
-  // announcement finish on its own first, same as Rusty asked for.
+  // screen) — deliberately NOT auto-speaking here on an ordinary song open.
+  // Speaking immediately used to race against VoiceOver's own "new screen"
+  // announcement, each talking over the other; waiting for the first press
+  // (pedal or touch) lets that announcement finish on its own first, same as
+  // Rusty asked for. A setlist-jump double-press is a different situation —
+  // we're already on this screen, focused, mid-performance, so there's no
+  // VoiceOver announcement to race and announcing the new song immediately
+  // (rather than requiring a third press) is exactly what was asked for.
   useEffect(() => {
-    setCurrentIndex(-1);
-  }, [displayLines]);
+    if (setlistJumpPendingRef.current) {
+      setlistJumpPendingRef.current = false;
+      setCurrentIndex(0);
+      if (displayLines.length > 0) {
+        speakNow(displayLines[0]);
+      }
+    } else {
+      setCurrentIndex(-1);
+    }
+  }, [displayLines, speakNow]);
 
   useEffect(() => {
     return () => stopImmediate();
@@ -205,10 +225,24 @@ export function PromptScreen({ navigation }: Props) {
     },
     // A double press changes song within the active setlist — layered on
     // top of the single-press line-advance above, which already fired for
-    // both presses; a no-op if no setlist is currently active.
+    // both presses; a no-op if no setlist is currently active. The second
+    // single-press's line is still mid-flight at this point (goNext already
+    // called speakNow just above, synchronously, before this handler runs),
+    // so interrupt it immediately with its own distinct sound + a spoken
+    // "Next/Previous song" rather than let a stale line keep playing while
+    // the new song loads in the background (Rusty's report, 2026-08-30).
     onDoubleAction: (action) => {
-      if (!isFocusedRef.current) return;
-      void advanceSetlist(action);
+      if (!isFocusedRef.current || !activeSetlist) return;
+      playSongChangeFeedback();
+      speakNow(action === 'next' ? 'Next song' : 'Previous song');
+      setlistJumpPendingRef.current = true;
+      void advanceSetlist(action).then((newSong) => {
+        if (newSong) return; // the effect above will announce it once displayLines updates
+        setlistJumpPendingRef.current = false;
+        if (isFocusedRef.current) {
+          speakNow(action === 'next' ? 'No more songs in this setlist.' : 'Already at the first song.');
+        }
+      });
     },
     onDisconnectAlert: () => {
       if (!isFocusedRef.current) return;
