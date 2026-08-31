@@ -6,6 +6,17 @@ export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mounted = useRef(true);
   const voiceIdRef = useRef<string | null>(null);
+  // Every speakNow() call claims the next id and checks it's still current
+  // right before actually speaking — if a newer call came in while this one
+  // was awaiting Speech.stop(), this one was superseded and silently backs
+  // off instead of racing it. Without this, two speakNow calls issued close
+  // together (e.g. a stale line from a pedal press, immediately followed by
+  // "Next song" once a double-press is recognized) can both end up audible,
+  // in submission order, since each call's own internal stop()+speak() has
+  // no way to know a newer one is already in flight (Rusty's report,
+  // 2026-08-31 — reading the stale line before "Next song" before "No more
+  // songs in this setlist", none of them properly cut off).
+  const requestIdRef = useRef(0);
 
   useEffect(() => {
     mounted.current = true;
@@ -41,9 +52,11 @@ export function useSpeech() {
    * finishing.
    */
   const speakNow = useCallback((text: string) => {
+    const requestId = ++requestIdRef.current;
     (async () => {
       await Speech.stop();
       if (!mounted.current) return;
+      if (requestIdRef.current !== requestId) return; // superseded by a newer speakNow call — don't speak stale content
       setIsSpeaking(true);
       Speech.speak(text, {
         voice: voiceIdRef.current ?? undefined,
@@ -67,6 +80,7 @@ export function useSpeech() {
   }, []);
 
   const stopImmediate = useCallback(() => {
+    requestIdRef.current++; // invalidates any speakNow() still awaiting Speech.stop() from before this call
     Speech.stop();
     setIsSpeaking(false);
   }, []);
