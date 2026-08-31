@@ -58,7 +58,7 @@ export function InputScreen({ navigation, route }: Props) {
         value={title}
         onChangeText={setTitle}
         placeholder="Song title"
-        accessibilityLabel="Song title"
+        accessibilityLabel="Title (optional)"
         returnKeyType="next"
       />
 
@@ -73,7 +73,7 @@ export function InputScreen({ navigation, route }: Props) {
         placeholderTextColor="#8a8a8a"
         multiline
         textAlignVertical="top"
-        accessibilityLabel="Lyrics text, one line per prompt"
+        accessibilityLabel="Lyrics — one line per prompt"
       />
 
       <Pressable
@@ -81,7 +81,7 @@ export function InputScreen({ navigation, route }: Props) {
         onPress={handleLoad}
         disabled={!canLoad}
         accessibilityRole="button"
-        accessibilityLabel={editSong ? 'Save changes' : 'Load song'}
+        accessibilityLabel={editSong ? 'Save Changes' : 'Load Song'}
         accessibilityState={{ disabled: !canLoad }}
       >
         <Text style={styles.loadButtonText}>{editSong ? 'Save Changes' : 'Load Song'}</Text>

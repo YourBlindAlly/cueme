@@ -77,14 +77,18 @@ export function VoiceSettingsScreen({ navigation }: Props) {
             interrupts CueMe's speech less — touch and buttons still work normally.
           </Text>
         </View>
-        <Switch value={reduceChatter} onValueChange={handleToggleReduceChatter} />
+        <Switch
+          value={reduceChatter}
+          onValueChange={handleToggleReduceChatter}
+          accessibilityLabel="Reduce VoiceOver chatter while performing"
+        />
       </View>
 
       <Pressable
         style={[styles.voiceRow, selectedId === null && styles.voiceRowSelected]}
         onPress={handleUseDefault}
         accessibilityRole="button"
-        accessibilityLabel="Use system default voice"
+        accessibilityLabel="System default"
         accessibilityState={{ selected: selectedId === null }}
       >
         <Text style={styles.voiceName}>System default</Text>
@@ -109,7 +113,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
                 style={styles.voiceInfo}
                 onPress={() => handleSelect(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Use voice ${item.name}, ${item.language}`}
+                accessibilityLabel={`${item.name}, ${item.language}`}
                 accessibilityState={{ selected: isSelected }}
               >
                 <Text style={styles.voiceName}>{item.name}</Text>
@@ -120,7 +124,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
                 style={styles.previewButton}
                 onPress={() => handlePreview(item)}
                 accessibilityRole="button"
-                accessibilityLabel={`Preview voice ${item.name}`}
+                accessibilityLabel="Preview"
               >
                 <Text style={styles.previewButtonText}>Preview</Text>
               </Pressable>

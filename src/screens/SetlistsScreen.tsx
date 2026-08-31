@@ -102,7 +102,7 @@ export function SetlistsScreen({ navigation }: Props) {
             style={styles.newButton}
             onPress={() => navigation.navigate('SetlistCreator')}
             accessibilityRole="button"
-            accessibilityLabel="Create a new setlist"
+            accessibilityLabel="New Setlist"
           >
             <Text style={styles.newButtonText}>New Setlist</Text>
           </Pressable>
@@ -142,13 +142,13 @@ export function SetlistsScreen({ navigation }: Props) {
                     accessibilityRole="button"
                     accessibilityLabel={
                       isActive
-                        ? `${item.name}, currently playing, song ${activeSetlist!.currentIndex + 1} of ${activeSetlist!.setlist.entries.length}. Double tap to resume.`
-                        : `Play setlist ${item.name}`
+                        ? `${item.name}, Playing — song ${activeSetlist!.currentIndex + 1} of ${activeSetlist!.setlist.entries.length}`
+                        : item.name
                     }
                     accessibilityHint={
                       isActive
-                        ? 'Swipe up or down to stop following this setlist.'
-                        : 'Swipe up or down to delete.'
+                        ? 'Double tap to resume. Swipe up or down to stop following this setlist.'
+                        : 'Double tap to play. Swipe up or down to delete.'
                     }
                     accessibilityActions={
                       isActive

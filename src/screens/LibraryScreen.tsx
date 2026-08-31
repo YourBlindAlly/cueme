@@ -112,7 +112,7 @@ export function LibraryScreen({ navigation }: Props) {
           style={styles.actionButton}
           onPress={() => navigation.navigate('DropboxBrowse')}
           accessibilityRole="button"
-          accessibilityLabel="Browse Dropbox"
+          accessibilityLabel="Dropbox"
         >
           <Text style={styles.actionButtonText}>Dropbox</Text>
         </Pressable>
@@ -128,7 +128,7 @@ export function LibraryScreen({ navigation }: Props) {
           style={styles.actionButton}
           onPress={() => navigation.navigate('NewSong')}
           accessibilityRole="button"
-          accessibilityLabel="Paste a new song"
+          accessibilityLabel="Paste New Song"
         >
           <Text style={styles.actionButtonText}>Paste New Song</Text>
         </Pressable>
@@ -137,7 +137,7 @@ export function LibraryScreen({ navigation }: Props) {
           onPress={handleImportFile}
           disabled={isImporting}
           accessibilityRole="button"
-          accessibilityLabel="Import a text file"
+          accessibilityLabel={isImporting ? 'Importing…' : 'Import File'}
         >
           <Text style={styles.actionButtonText}>
             {isImporting ? 'Importing…' : 'Import File'}
@@ -150,7 +150,8 @@ export function LibraryScreen({ navigation }: Props) {
           style={styles.sortButton}
           onPress={handleCycleSort}
           accessibilityRole="button"
-          accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}. Tap to change.`}
+          accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}`}
+          accessibilityHint="Tap to change."
         >
           <Text style={styles.sortButtonText}>Sort: {SORT_MODE_LABEL[sortMode]}</Text>
         </Pressable>

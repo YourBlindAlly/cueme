@@ -176,7 +176,7 @@ export function SetlistCreatorScreen({ navigation }: Props) {
         onPress={handleSave}
         disabled={isSaving}
         accessibilityRole="button"
-        accessibilityLabel="Save setlist"
+        accessibilityLabel={isSaving ? 'Saving…' : 'Save Setlist'}
       >
         <Text style={styles.saveButtonText}>{isSaving ? 'Saving…' : 'Save Setlist'}</Text>
       </Pressable>
@@ -202,7 +202,8 @@ export function SetlistCreatorScreen({ navigation }: Props) {
               onPress={() => handleAdd(item)}
               disabled={added}
               accessibilityRole="button"
-              accessibilityLabel={added ? `${item.title}, already added` : `Add ${item.title}`}
+              accessibilityLabel={added ? `${item.title}, Added` : item.title}
+              accessibilityHint={added ? undefined : 'Double tap to add.'}
             >
               <Text style={styles.libraryTitle} numberOfLines={1}>
                 {item.title}

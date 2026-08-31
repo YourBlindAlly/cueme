@@ -74,7 +74,7 @@ export function PedalSettingsScreen({ navigation }: Props) {
                 hitSlop={LINK_HIT_SLOP}
                 onPress={handleCancelCapture}
                 accessibilityRole="button"
-                accessibilityLabel={`Cancel assigning ${ACTION_LABELS[action]}`}
+                accessibilityLabel="Cancel"
               >
                 <Text style={styles.cancelLink}>Cancel</Text>
               </Pressable>
@@ -85,7 +85,7 @@ export function PedalSettingsScreen({ navigation }: Props) {
               onPress={() => handleAssign(action)}
               disabled={isCapturing}
               accessibilityRole="button"
-              accessibilityLabel={`Press a button to assign ${ACTION_LABELS[action]}`}
+              accessibilityLabel="Press a button to assign"
             >
               <Text style={styles.assignButtonText}>Press a button to assign</Text>
             </Pressable>

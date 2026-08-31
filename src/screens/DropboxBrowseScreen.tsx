@@ -260,7 +260,8 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
               hitSlop={LINK_HIT_SLOP}
               onPress={handleCycleSort}
               accessibilityRole="button"
-              accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}. Tap to change.`}
+              accessibilityLabel={`Sort: ${SORT_MODE_LABEL[sortMode]}`}
+              accessibilityHint="Tap to change."
             >
               <Text style={styles.selectLink}>Sort: {SORT_MODE_LABEL[sortMode]}</Text>
             </Pressable>
@@ -270,7 +271,8 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
               hitSlop={LINK_HIT_SLOP}
               onPress={handleToggleSelectMode}
               accessibilityRole="button"
-              accessibilityLabel={isSelectMode ? 'Cancel selecting songs' : 'Select multiple songs to import'}
+              accessibilityLabel={isSelectMode ? 'Cancel' : 'Select'}
+              accessibilityHint={isSelectMode ? undefined : 'Select multiple songs to import.'}
             >
               <Text style={styles.selectLink}>{isSelectMode ? 'Cancel' : 'Select'}</Text>
             </Pressable>
@@ -279,7 +281,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
             hitSlop={LINK_HIT_SLOP}
             onPress={disconnect}
             accessibilityRole="button"
-            accessibilityLabel="Disconnect Dropbox"
+            accessibilityLabel="Disconnect"
           >
             <Text style={styles.disconnectLink}>Disconnect</Text>
           </Pressable>
@@ -294,9 +296,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
             hitSlop={LINK_HIT_SLOP}
             onPress={handleSelectAll}
             accessibilityRole="button"
-            accessibilityLabel={
-              selectedPaths.size === files.length ? 'Deselect all songs' : 'Select all songs'
-            }
+            accessibilityLabel={selectedPaths.size === files.length ? 'Deselect All' : 'Select All'}
           >
             <Text style={styles.selectLink}>
               {selectedPaths.size === files.length ? 'Deselect All' : 'Select All'}
@@ -307,7 +307,7 @@ export function DropboxBrowseScreen({ navigation, route }: Props) {
             onPress={handleImportSelected}
             disabled={selectedPaths.size === 0 || importProgress !== null}
             accessibilityRole="button"
-            accessibilityLabel={`Import ${selectedPaths.size} selected song${selectedPaths.size === 1 ? '' : 's'}`}
+            accessibilityLabel={`Import ${selectedPaths.size} Selected`}
           >
             <Text style={styles.importButtonText}>Import {selectedPaths.size} Selected</Text>
           </Pressable>
