@@ -89,23 +89,6 @@ export function SetlistsScreen({ navigation }: Props) {
             <Text style={styles.newButtonText}>New Setlist</Text>
           </Pressable>
 
-          {activeSetlist ? (
-            <View style={styles.activeRow}>
-              <Text style={styles.activeText} numberOfLines={1}>
-                Currently playing: {activeSetlist.setlist.name} — song {activeSetlist.currentIndex + 1}{' '}
-                of {activeSetlist.setlist.entries.length}
-              </Text>
-              <Pressable
-                hitSlop={LINK_HIT_SLOP}
-                onPress={() => clearSetlist()}
-                accessibilityRole="button"
-                accessibilityLabel="Stop following this setlist"
-              >
-                <Text style={styles.stopLink}>Stop</Text>
-              </Pressable>
-            </View>
-          ) : null}
-
           {isLoadingOne && <ActivityIndicator color="#fff" style={styles.spinner} />}
           {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -120,16 +103,49 @@ export function SetlistsScreen({ navigation }: Props) {
                   No setlists yet. Tap "New Setlist" to build your first one.
                 </Text>
               }
-              renderItem={({ item }) => (
-                <Pressable
-                  style={styles.setlistRow}
-                  onPress={() => handleOpen(item)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Play setlist ${item.name}`}
-                >
-                  <Text style={styles.setlistName}>{item.name}</Text>
-                </Pressable>
-              )}
+              renderItem={({ item }) => {
+                // The active setlist's own row does double duty instead of
+                // needing a separate always-visible "currently playing"
+                // banner plus a Stop button plus this same row again below
+                // it (Rusty's own complaint, 2026-08-30, about the old
+                // three-part layout): tapping it resumes exactly where
+                // playback left off rather than restarting from song 1, and
+                // "Stop following this setlist" is a VoiceOver custom action
+                // on the row (swipe up/down), the same one-row-many-actions
+                // pattern already used on Library/Setlist Creator rows.
+                const isActive = activeSetlist?.setlist.name === item.name;
+                return (
+                  <Pressable
+                    style={styles.setlistRow}
+                    onPress={() => (isActive ? navigation.popTo('Prompt') : handleOpen(item))}
+                    accessibilityRole="button"
+                    accessibilityLabel={
+                      isActive
+                        ? `${item.name}, currently playing, song ${activeSetlist!.currentIndex + 1} of ${activeSetlist!.setlist.entries.length}. Double tap to resume.`
+                        : `Play setlist ${item.name}`
+                    }
+                    accessibilityHint={isActive ? 'Swipe up or down to stop following this setlist.' : undefined}
+                    accessibilityActions={isActive ? [{ name: 'stop', label: 'Stop Following' }] : undefined}
+                    onAccessibilityAction={
+                      isActive
+                        ? (event) => {
+                            if (event.nativeEvent.actionName === 'stop') {
+                              clearSetlist();
+                            }
+                          }
+                        : undefined
+                    }
+                  >
+                    <Text style={styles.setlistName}>{item.name}</Text>
+                    {isActive ? (
+                      <Text style={styles.activeText} numberOfLines={1}>
+                        Playing — song {activeSetlist!.currentIndex + 1} of{' '}
+                        {activeSetlist!.setlist.entries.length}
+                      </Text>
+                    ) : null}
+                  </Pressable>
+                );
+              }}
             />
           )}
         </>
@@ -176,24 +192,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
   },
-  activeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#1c1c1c',
-    borderRadius: 10,
-    padding: 12,
-    marginBottom: 16,
-    gap: 12,
-  },
   activeText: {
     color: '#9ad39a',
     fontSize: 14,
-    flex: 1,
-  },
-  stopLink: {
-    color: '#ff6b6b',
-    fontSize: 14,
+    marginTop: 4,
   },
   spinner: {
     marginTop: 20,
