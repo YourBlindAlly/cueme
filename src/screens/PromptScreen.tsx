@@ -484,20 +484,24 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
   },
+  // Stacked, not a shared row — a row layout let the button cluster (grown
+  // to 6 buttons over this session) squeeze the title/setlist-text block
+  // down to a near-zero width, which made VoiceOver skip it entirely rather
+  // than just display it awkwardly (Rusty's report, 2026-08-31: swiping
+  // through the screen never reached the title or "song N of M" text at
+  // all). Stacking removes the competition for horizontal space outright,
+  // rather than trying to tune flex/shrink values to fend it off again as
+  // more buttons get added later.
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
     paddingHorizontal: 20,
     paddingTop: 16,
   },
   headerTextBlock: {
-    flexShrink: 1,
+    marginBottom: 12,
   },
   songTitle: {
     color: '#999',
     fontSize: 16,
-    flexShrink: 1,
   },
   setlistText: {
     color: '#4f8cff',
@@ -507,7 +511,6 @@ const styles = StyleSheet.create({
   headerLinks: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'flex-end',
     gap: 14,
   },
   exitLink: {
