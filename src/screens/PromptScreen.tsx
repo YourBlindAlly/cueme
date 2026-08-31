@@ -380,15 +380,18 @@ export function PromptScreen({ navigation }: Props) {
           // still spoken, just only ever through speakNow, never VoiceOver's
           // separate voice.
           accessibilityLabel="Lyrics"
-          // VoiceOver's own adjustable-element convention: swipe up fires
-          // 'increment', swipe down fires 'decrement' — mapped here so up
-          // advances forward (next line) and down goes back, matching that
-          // increment/decrement semantic rather than a screen-position one.
-          accessibilityHint="Swipe up for the next line, down for the previous."
+          // VoiceOver always sends 'increment' for swipe-up and 'decrement'
+          // for swipe-down on an adjustable element — that gesture-to-name
+          // mapping is fixed, but which app action each one triggers is
+          // entirely up to us. Mapped decrement (swipe down) to next and
+          // increment (swipe up) to previous, matching the down-advances
+          // feel of the pedal bindings (Page Down/Down Arrow -> next) rather
+          // than a slider's up-increases convention (Rusty's call, 2026-08-31).
+          accessibilityHint="Swipe down for the next line, up for the previous."
           onAccessibilityAction={(event) => {
-            if (event.nativeEvent.actionName === 'increment') {
+            if (event.nativeEvent.actionName === 'decrement') {
               goNext();
-            } else if (event.nativeEvent.actionName === 'decrement') {
+            } else if (event.nativeEvent.actionName === 'increment') {
               goPrevious();
             }
           }}
