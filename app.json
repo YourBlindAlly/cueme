@@ -33,7 +33,16 @@
     "plugins": [
       "expo-audio",
       "expo-secure-store",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "backgroundColor": "#000000",
+          "imageWidth": 260,
+          "resizeMode": "contain"
+        }
+      ]
     ]
   }
 }
