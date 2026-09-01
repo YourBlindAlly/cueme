@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 import { LibraryScreen } from './src/screens/LibraryScreen';
 import { InputScreen } from './src/screens/InputScreen';
 import { PromptScreen } from './src/screens/PromptScreen';
@@ -22,6 +23,12 @@ import type { RootStackParamList } from './src/navigation/types';
 import type { Song } from './src/types';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Keeps the native splash screen (icon + wordmark) up through the async
+// startup work below, instead of the OS's default near-instant auto-hide —
+// without this, the splash was dismissing itself before there was anything
+// to show, which read as the app skipping straight to the Library.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const darkTheme = {
   dark: true,
@@ -51,6 +58,7 @@ export default function App() {
       const stored = await loadActiveSong();
       setInitialSong(stored);
       setIsReady(true);
+      await SplashScreen.hideAsync();
     })();
   }, []);
 

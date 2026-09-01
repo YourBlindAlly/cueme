@@ -37,6 +37,18 @@ describe('tokenizeChordedLine', () => {
     ]);
   });
 
+  it('reassembles a word split by a chord glued on both sides', () => {
+    expect(tokenizeChordedLine('It was won[C]derful')).toEqual([
+      { chord: null, text: 'It' },
+      { chord: null, text: 'was' },
+      { chord: 'C', text: 'wonderful' },
+    ]);
+  });
+
+  it('reassembles a word split by two chords glued on both sides, keeping the first chord', () => {
+    expect(tokenizeChordedLine('won[C]der[D]ful')).toEqual([{ chord: 'C', text: 'wonderful' }]);
+  });
+
   it('handles a line with no chords at all', () => {
     expect(tokenizeChordedLine('Plain lyric line')).toEqual([
       { chord: null, text: 'Plain' },
