@@ -5,7 +5,6 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { deleteSetlist, listSetlists, loadSetlist, type SetlistSummary } from '../setlist/setlistStorage';
-import { isDropboxConfigured } from '../cloud/dropbox/dropboxAuth';
 import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Setlists'>;
@@ -66,7 +65,7 @@ export function SetlistsScreen({ navigation }: Props) {
         onPress: async () => {
           try {
             await deleteSetlist(summary);
-            setSetlists((current) => (current ?? []).filter((s) => s.path !== summary.path));
+            setSetlists((current) => (current ?? []).filter((s) => s.id !== summary.id));
           } catch (err) {
             Alert.alert('Delete failed', err instanceof Error ? err.message : String(err));
           }
@@ -91,32 +90,33 @@ export function SetlistsScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      {!isDropboxConfigured ? (
-        <Text style={styles.infoText}>
-          Setlists are saved to Dropbox, so connect Dropbox first (from the Library screen) before
-          building one.
-        </Text>
+      {/* Setlists live on this device first and foremost — creating, playing,
+          and deleting one never depends on Dropbox being connected or
+          reachable. A backup copy is kept in sync with Dropbox in the
+          background on a best-effort basis whenever there's a connection,
+          purely for safekeeping/restoring later, never required for normal
+          use (Rusty's own point, 2026-08-31: a setlist he already built
+          should still open with no signal at a venue, even if Dropbox
+          itself is unreachable). */}
+      <Pressable
+        style={styles.newButton}
+        onPress={() => navigation.navigate('SetlistCreator')}
+        accessibilityRole="button"
+        accessibilityLabel="New Setlist"
+      >
+        <Text style={styles.newButtonText}>New Setlist</Text>
+      </Pressable>
+
+      {isLoadingOne && <ActivityIndicator color="#fff" style={styles.spinner} />}
+      {error && <Text style={styles.errorText}>{error}</Text>}
+
+      {setlists === null && !error ? (
+        <ActivityIndicator color="#fff" style={styles.spinner} />
       ) : (
-        <>
-          <Pressable
-            style={styles.newButton}
-            onPress={() => navigation.navigate('SetlistCreator')}
-            accessibilityRole="button"
-            accessibilityLabel="New Setlist"
-          >
-            <Text style={styles.newButtonText}>New Setlist</Text>
-          </Pressable>
-
-          {isLoadingOne && <ActivityIndicator color="#fff" style={styles.spinner} />}
-          {error && <Text style={styles.errorText}>{error}</Text>}
-
-          {setlists === null && !error ? (
-            <ActivityIndicator color="#fff" style={styles.spinner} />
-          ) : (
-            <FlatList
-              data={setlists ?? []}
-              keyExtractor={(item) => item.path}
-              ListEmptyComponent={
+        <FlatList
+          data={setlists ?? []}
+          keyExtractor={(item) => item.id}
+          ListEmptyComponent={
                 <Text style={styles.emptyText}>
                   No setlists yet. Tap "New Setlist" to build your first one.
                 </Text>
@@ -178,8 +178,6 @@ export function SetlistsScreen({ navigation }: Props) {
               }}
             />
           )}
-        </>
-      )}
     </SafeAreaView>
   );
 }
@@ -204,11 +202,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 22,
     fontWeight: '700',
-  },
-  infoText: {
-    color: '#bbb',
-    fontSize: 15,
-    lineHeight: 21,
   },
   newButton: {
     backgroundColor: '#2f6fed',
