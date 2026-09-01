@@ -1,0 +1,18 @@
+name = "cueme-song-search"
+main = "src/index.ts"
+compatibility_date = "2026-08-31"
+
+[observability]
+enabled = true
+
+# Everything below is set as a Worker secret (Dashboard > Workers & Pages >
+# cueme-song-search > Settings > Variables and Secrets), never committed
+# here — see SETUP.txt for the exact steps and names:
+#   APP_SHARED_SECRET   shared secret the app must send back, stops a
+#                       stranger who finds the URL from running up the bill
+#   BRAVE_API_KEY       Brave Search API key
+#   AI_PROVIDER         "gemini" | "anthropic" | "openai" (defaults to gemini)
+#   AI_MODEL            optional — overrides the default model for whichever
+#                       AI_PROVIDER is selected
+#   GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
+#                       only the one matching AI_PROVIDER is required

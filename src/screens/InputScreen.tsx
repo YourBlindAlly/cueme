@@ -17,9 +17,10 @@ type Props = NativeStackScreenProps<RootStackParamList, 'NewSong'>;
 
 export function InputScreen({ navigation, route }: Props) {
   const editSong = route.params?.editSong;
+  const prefill = route.params?.prefill;
   const { loadSong } = useAppState();
-  const [title, setTitle] = useState(editSong?.title ?? '');
-  const [rawText, setRawText] = useState(editSong?.rawText ?? '');
+  const [title, setTitle] = useState(editSong?.title ?? prefill?.title ?? '');
+  const [rawText, setRawText] = useState(editSong?.rawText ?? prefill?.rawText ?? '');
 
   const canLoad = rawText.trim().length > 0;
 

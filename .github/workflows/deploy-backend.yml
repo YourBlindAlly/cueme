@@ -1,0 +1,44 @@
+name: Deploy song-search backend
+
+# Deploys the Cloudflare Worker in backend/ whenever it changes. Needs two
+# repo secrets set once (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN    a token with Workers Scripts:Edit permission
+#   CLOUDFLARE_ACCOUNT_ID   found on the right side of the Cloudflare dashboard
+# The Worker's own runtime secrets (API keys, the shared app secret) are set
+# separately, directly on the Worker in the Cloudflare dashboard — see
+# backend/SETUP.txt.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type-check and test
+        run: |
+          npx tsc --noEmit
+          npx jest
+
+      - name: Deploy
+        run: npx wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}

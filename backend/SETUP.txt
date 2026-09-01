@@ -1,0 +1,87 @@
+CueMe song-search backend — one-time setup
+Written 2026-09-01. This is the only thing left before "Find a Song" works
+in the app. Everything else (code, tests, GitHub Actions deploy workflow) is
+already built and committed.
+
+WHAT THIS IS
+A small Cloudflare Worker (backend/ in this repo) that takes a song
+title/artist from the app, searches the web for it, and asks an AI to pull
+out clean lyrics (and chords, if asked for) from the results. It's built
+provider-agnostic on the AI side — you can point it at Gemini, Claude
+(Anthropic), or OpenAI just by changing which secret is set, no code change.
+
+WHAT YOU NEED, AND WHERE TO GET EACH ONE
+
+1. A Cloudflare API token, so GitHub Actions can deploy the Worker for you.
+   In the Cloudflare dashboard: My Profile > API Tokens > Create Token >
+   "Edit Cloudflare Workers" template. Copy the token value.
+   Also grab your Account ID — it's shown on the right-hand side of the
+   main Cloudflare dashboard.
+
+2. A Brave Search API key (for the web-search step). Sign up at
+   https://api.search.brave.com/ — the free tier (2,000 queries/month) is
+   plenty to start. Copy the API key.
+
+3. An API key from whichever AI provider you want to use for the
+   extraction step. Pick ONE to start (you can add the others later,
+   or switch, without touching any code):
+     Gemini:    https://aistudio.google.com/ — cheapest option researched
+                so far, this is the one the code defaults to if you don't
+                set AI_PROVIDER at all.
+     Anthropic: https://console.anthropic.com/
+     OpenAI:    https://platform.openai.com/
+
+4. A shared secret you make up yourself — any random string of letters and
+   numbers works, it just has to match in two places (step 6 below). This
+   is what stops a stranger who somehow finds the Worker's URL from running
+   up your AI bill; it is not real per-user login, just a basic lock.
+
+WHERE EACH VALUE GOES
+
+5. In this GitHub repo (YourBlindAlly/cueme): Settings > Secrets and
+   variables > Actions > New repository secret. Add two:
+     CLOUDFLARE_API_TOKEN    (from step 1)
+     CLOUDFLARE_ACCOUNT_ID   (from step 1)
+   Once these exist, push to master (or run the "Deploy song-search
+   backend" workflow manually from the Actions tab) and it will create the
+   Worker on Cloudflare for the first time.
+
+6. After that first deploy, go to the Cloudflare dashboard > Workers &
+   Pages > cueme-song-search > Settings > Variables and Secrets, and add
+   these as Secrets (not plain variables, since these are all sensitive):
+     APP_SHARED_SECRET   your made-up string from step 4
+     BRAVE_API_KEY        from step 2
+     AI_PROVIDER          "gemini", "anthropic", or "openai" — whichever
+                          you got a key for in step 3 (defaults to gemini
+                          if you skip this)
+     GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
+                          only the one matching AI_PROVIDER is required
+
+7. Back in the app's code, open cueme-app/src/aiSearch/config.ts and fill
+   in the two constants:
+     AI_SEARCH_BACKEND_URL — the Worker's address plus "/search". You'll
+       find the base address on the Worker's own page in the Cloudflare
+       dashboard, right under its name — something like
+       "https://cueme-song-search.<your-subdomain>.workers.dev". Add
+       "/search" to the end.
+     AI_SEARCH_APP_SECRET — must be typed exactly the same as
+       APP_SHARED_SECRET from step 6.
+   Then rebuild and reinstall the app the normal way. Until this file is
+   filled in, the Find a Song screen just shows a friendly "not set up
+   yet" message instead of trying to call anything.
+
+TRYING IT
+Once all of the above is done: open the app, Library > Find a Song, type a
+title (artist optional but helps), choose whether you want chords, tap
+Search. If it can't find a confident match it says so rather than guessing
+— that's deliberate, not a bug. Whatever it finds lands on the normal
+paste/review screen, same as any other import, so nothing saves to your
+library until you tap Save.
+
+WHAT THIS DOESN'T DO YET, ON PURPOSE
+No payment/credit gating — this is built for your own personal use first,
+per the plan already agreed on. No shared cache across other people, ever
+— every search only ever writes into the searching device's own library,
+matching the copyright/legal decision already made for this feature. Only
+search-metadata (title, artist, success, timing) gets logged, in the
+Worker's own Cloudflare logs — never the actual lyrics/chords text.

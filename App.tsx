@@ -13,6 +13,7 @@ import { VoiceSettingsScreen } from './src/screens/VoiceSettingsScreen';
 import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
 import { SetlistsScreen } from './src/screens/SetlistsScreen';
 import { SetlistCreatorScreen } from './src/screens/SetlistCreatorScreen';
+import { FindSongScreen } from './src/screens/FindSongScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
 import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
 import { configureAudioSession } from './src/feedback/feedback';
@@ -83,6 +84,7 @@ export default function App() {
               <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
               <Stack.Screen name="Setlists" component={SetlistsScreen} />
               <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
+              <Stack.Screen name="FindSong" component={FindSongScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </AppStateProvider>

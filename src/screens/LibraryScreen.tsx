@@ -134,6 +134,14 @@ export function LibraryScreen({ navigation }: Props) {
         </Pressable>
         <Pressable
           style={styles.actionButton}
+          onPress={() => navigation.navigate('FindSong')}
+          accessibilityRole="button"
+          accessibilityLabel="Find a Song"
+        >
+          <Text style={styles.actionButtonText}>Find a Song</Text>
+        </Pressable>
+        <Pressable
+          style={styles.actionButton}
           onPress={handleImportFile}
           disabled={isImporting}
           accessibilityRole="button"
