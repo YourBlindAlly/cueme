@@ -56,8 +56,8 @@ WHERE EACH VALUE GOES
      GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
                           only the one matching AI_PROVIDER is required
 
-6. Back in the app's code, open cueme-app/src/aiSearch/config.ts and fill
-   in the two constants:
+6. Same place as step 4 (GitHub repo Settings > Secrets and variables >
+   Actions), add two more repository secrets:
      AI_SEARCH_BACKEND_URL — the Worker's address plus "/search". You'll
        find the base address on the Worker's own page in the Cloudflare
        dashboard, right under its name — something like
@@ -65,9 +65,15 @@ WHERE EACH VALUE GOES
        "/search" to the end.
      AI_SEARCH_APP_SECRET — must be typed exactly the same as
        APP_SHARED_SECRET from step 5.
-   Then rebuild and reinstall the app the normal way. Until this file is
-   filled in, the Find a Song screen just shows a friendly "not set up
-   yet" message instead of trying to call anything.
+   These are NOT put directly into cueme-app/src/aiSearch/config.ts, on
+   purpose — this repo is public, and a real secret committed there would
+   be readable by anyone on GitHub. The build workflow writes them into
+   that file at build time, straight into the CI runner's copy, never into
+   git history — see the "Inject AI search backend config" step in
+   .github/workflows/build-unsigned-ipa.yml. Once these two secrets exist,
+   push (or re-run the build workflow) and the next build will have Find a
+   Song working. Until they're set, the Find a Song screen just shows a
+   friendly "not set up yet" message instead of trying to call anything.
 
 TRYING IT
 Once all of the above is done: open the app, Library > Find a Song, type a
