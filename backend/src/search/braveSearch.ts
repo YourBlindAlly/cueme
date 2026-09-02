@@ -4,7 +4,10 @@ export type SearchResult = {
   description: string;
 };
 
-export async function braveSearch(apiKey: string, query: string, count = 5): Promise<SearchResult[]> {
+// Brave bills per request, not per result returned (max 20 per request), so
+// asking for more candidates here costs nothing extra — it just gives the
+// extraction step more pages to find a real match among.
+export async function braveSearch(apiKey: string, query: string, count = 10): Promise<SearchResult[]> {
   const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=${count}`;
   const res = await fetch(url, {
     headers: {

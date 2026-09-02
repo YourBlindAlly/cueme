@@ -19,8 +19,12 @@ WHAT YOU NEED, AND WHERE TO GET EACH ONE
    main Cloudflare dashboard.
 
 2. A Brave Search API key (for the web-search step). Sign up at
-   https://api.search.brave.com/ — the free tier (2,000 queries/month) is
-   plenty to start. Copy the API key.
+   https://api.search.brave.com/ — as of 2026, Brave requires a card on
+   file at signup (an anti-fraud measure, not an immediate charge) and
+   gives new accounts a $5/month credit, roughly 1,000 searches worth.
+   Past that it's metered at a few dollars per thousand queries. At
+   Rusty's actual personal-use volume this costs at most a few cents
+   either way. Copy the API key.
 
 3. An API key from whichever AI provider you want to use for the
    extraction step. Pick ONE to start (you can add the others later,

@@ -57,9 +57,17 @@ export default {
     }
 
     const startedAt = Date.now();
-    // Metadata-only logging (title/artist/success/timing), per the settled
-    // per-user-only / no-content-archive decision for this feature — never
-    // log the actual lyrics/chords text itself.
+    // Metadata-only logging (title/artist/success/timing/result count), per
+    // the settled per-user-only / no-content-archive decision for this
+    // feature — never log the actual lyrics/chords text itself. resultCount
+    // and the reason split below exist specifically so these logs (viewable
+    // in the Cloudflare dashboard's Worker Logs) double as a simple
+    // evaluation layer: a low resultCount pointing at a search-query
+    // problem looks very different from a healthy resultCount that still
+    // comes back not_found_in_results, which points at the AI step instead.
+    // No dashboard/DB needed for this — revisit only if the raw logs stop
+    // being enough to tell what's going wrong.
+    let resultCount = 0;
     const logResult = (success: boolean, extra?: Record<string, unknown>) => {
       console.log(
         JSON.stringify({
@@ -68,6 +76,7 @@ export default {
           artist,
           includeChords,
           success,
+          resultCount,
           ms: Date.now() - startedAt,
           ...extra,
         })
@@ -77,6 +86,7 @@ export default {
     try {
       const query = `${title} ${artist} ${includeChords ? 'chords' : 'lyrics'}`.trim();
       const results = await braveSearch(env.BRAVE_API_KEY, query);
+      resultCount = results.length;
 
       const provider = getAiProvider(env);
       const prompt = buildExtractionPrompt({ title, artist, includeChords, results });
@@ -84,7 +94,7 @@ export default {
       const lyricsText = cleanAiResponse(raw);
 
       if (lyricsText === null) {
-        logResult(false, { reason: 'not_found' });
+        logResult(false, { reason: resultCount === 0 ? 'no_search_results' : 'not_found_in_results' });
         return json(
           { error: `Couldn't find reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
           404
