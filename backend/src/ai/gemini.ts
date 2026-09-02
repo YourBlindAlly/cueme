@@ -1,9 +1,11 @@
 import type { AiProvider } from './types';
 
-// Check this against the retirement schedule in Rusty's model-research notes
-// before assuming it's still current — Google retires Gemini model versions
-// on a rolling basis. Override without a code change via the AI_MODEL secret.
-const DEFAULT_MODEL = 'gemini-2.5-flash-lite';
+// gemini-2.5-flash-lite was retired for new requests as of 2026-09-02,
+// sooner than the October retirement date on record for the non-lite
+// version — confirmed live via a direct 404 from the API pointing at this
+// replacement. Check current retirement status before assuming this is
+// still right; override without a code change via the AI_MODEL secret.
+const DEFAULT_MODEL = 'gemini-3.5-flash-lite';
 
 export function createGeminiProvider(apiKey: string, model = DEFAULT_MODEL): AiProvider {
   return {
