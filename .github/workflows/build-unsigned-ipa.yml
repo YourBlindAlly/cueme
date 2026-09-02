@@ -38,6 +38,18 @@ jobs:
       - name: Install JS dependencies
         run: npm ci
 
+      # src/aiSearch/config.ts is committed with blank values on purpose —
+      # this repo is public, so a real secret committed there would be
+      # readable by anyone. Injected here instead, straight from GitHub
+      # repo secrets, into the CI runner's throwaway checkout only; it
+      # ends up baked into the compiled .ipa the normal way, never in git
+      # history. No-ops harmlessly (stays blank) if these secrets aren't
+      # set yet.
+      - name: Inject AI search backend config
+        run: |
+          sed -i '' "s|export const AI_SEARCH_BACKEND_URL = '';|export const AI_SEARCH_BACKEND_URL = '${{ secrets.AI_SEARCH_BACKEND_URL }}';|" src/aiSearch/config.ts
+          sed -i '' "s|export const AI_SEARCH_APP_SECRET = '';|export const AI_SEARCH_APP_SECRET = '${{ secrets.AI_SEARCH_APP_SECRET }}';|" src/aiSearch/config.ts
+
       - name: Prebuild native iOS project
         run: npx expo prebuild --platform ios --non-interactive
 
