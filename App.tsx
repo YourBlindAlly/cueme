@@ -30,6 +30,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 // to show, which read as the app skipping straight to the Library.
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Startup itself (audio session + loading the last active song) usually
+// finishes in well under a second, which made the splash barely visible
+// even once it was correctly held open above. This guarantees it stays up
+// at least this long regardless, so the icon/wordmark actually register.
+const MINIMUM_SPLASH_MS = 1500;
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
 const darkTheme = {
   dark: true,
   colors: {
@@ -54,8 +61,13 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
+      const startedAt = Date.now();
       await configureAudioSession();
       const stored = await loadActiveSong();
+      const elapsed = Date.now() - startedAt;
+      if (elapsed < MINIMUM_SPLASH_MS) {
+        await delay(MINIMUM_SPLASH_MS - elapsed);
+      }
       setInitialSong(stored);
       setIsReady(true);
       await SplashScreen.hideAsync();
