@@ -1,11 +1,17 @@
 import type { AiProvider } from './types';
 
-const DEFAULT_MODEL = 'gpt-4o-mini';
+// Cheap tier that's good at language tasks. Verify this name is still
+// current before assuming so — OpenAI's naming shifts — and override
+// without a code change via the AI_MODEL secret if it's drifted.
+const DEFAULT_MODEL = 'gpt-5-mini';
 
 export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiProvider {
   return {
     async complete(prompt: string): Promise<string> {
-      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      // The Responses API, not Chat Completions — the web_search tool
+      // (real search + real page reads, not answering from memory) is a
+      // Responses API feature.
+      const res = await fetch('https://api.openai.com/v1/responses', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -13,7 +19,8 @@ export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: 'user', content: prompt }],
+          input: prompt,
+          tools: [{ type: 'web_search' }],
         }),
       });
 
@@ -21,8 +28,15 @@ export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
         throw new Error(`OpenAI request failed: ${res.status} ${await res.text()}`);
       }
 
-      const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-      return data.choices?.[0]?.message?.content ?? '';
+      const data = (await res.json()) as {
+        output?: { type: string; content?: { type: string; text?: string }[] }[];
+      };
+      const messageItems = (data.output ?? []).filter((item) => item.type === 'message');
+      return messageItems
+        .flatMap((item) => item.content ?? [])
+        .filter((c) => c.type === 'output_text')
+        .map((c) => c.text ?? '')
+        .join('');
     },
   };
 }

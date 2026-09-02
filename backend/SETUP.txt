@@ -1,14 +1,18 @@
 CueMe song-search backend — one-time setup
-Written 2026-09-01. This is the only thing left before "Find a Song" works
-in the app. Everything else (code, tests, GitHub Actions deploy workflow) is
-already built and committed.
+Written 2026-09-01, updated 2026-09-02 (dropped Brave Search — see below).
+This is the only thing left before "Find a Song" works in the app.
+Everything else (code, tests, GitHub Actions deploy workflow) is already
+built and committed.
 
 WHAT THIS IS
 A small Cloudflare Worker (backend/ in this repo) that takes a song
-title/artist from the app, searches the web for it, and asks an AI to pull
-out clean lyrics (and chords, if asked for) from the results. It's built
-provider-agnostic on the AI side — you can point it at Gemini, Claude
-(Anthropic), or OpenAI just by changing which secret is set, no code change.
+title/artist from the app and asks an AI to search the real web, read a
+real page, and pull out clean lyrics (and chords, if asked for) — not
+recite from its own memory of the song. It's built provider-agnostic — you
+can point it at Gemini, Claude (Anthropic), or OpenAI just by changing
+which secret is set, no code change. Each of those providers does its own
+real web search and page-reading as part of one call, so there's no
+separate search API to sign up for.
 
 WHAT YOU NEED, AND WHERE TO GET EACH ONE
 
@@ -18,15 +22,7 @@ WHAT YOU NEED, AND WHERE TO GET EACH ONE
    Also grab your Account ID — it's shown on the right-hand side of the
    main Cloudflare dashboard.
 
-2. A Brave Search API key (for the web-search step). Sign up at
-   https://api.search.brave.com/ — as of 2026, Brave requires a card on
-   file at signup (an anti-fraud measure, not an immediate charge) and
-   gives new accounts a $5/month credit, roughly 1,000 searches worth.
-   Past that it's metered at a few dollars per thousand queries. At
-   Rusty's actual personal-use volume this costs at most a few cents
-   either way. Copy the API key.
-
-3. An API key from whichever AI provider you want to use for the
+2. An API key from whichever AI provider you want to use for the
    extraction step. Pick ONE to start (you can add the others later,
    or switch, without touching any code):
      Gemini:    https://aistudio.google.com/ — cheapest option researched
@@ -35,14 +31,14 @@ WHAT YOU NEED, AND WHERE TO GET EACH ONE
      Anthropic: https://console.anthropic.com/
      OpenAI:    https://platform.openai.com/
 
-4. A shared secret you make up yourself — any random string of letters and
-   numbers works, it just has to match in two places (step 6 below). This
+3. A shared secret you make up yourself — any random string of letters and
+   numbers works, it just has to match in two places (step 5 below). This
    is what stops a stranger who somehow finds the Worker's URL from running
    up your AI bill; it is not real per-user login, just a basic lock.
 
 WHERE EACH VALUE GOES
 
-5. In this GitHub repo (YourBlindAlly/cueme): Settings > Secrets and
+4. In this GitHub repo (YourBlindAlly/cueme): Settings > Secrets and
    variables > Actions > New repository secret. Add two:
      CLOUDFLARE_API_TOKEN    (from step 1)
      CLOUDFLARE_ACCOUNT_ID   (from step 1)
@@ -50,18 +46,17 @@ WHERE EACH VALUE GOES
    backend" workflow manually from the Actions tab) and it will create the
    Worker on Cloudflare for the first time.
 
-6. After that first deploy, go to the Cloudflare dashboard > Workers &
+5. After that first deploy, go to the Cloudflare dashboard > Workers &
    Pages > cueme-song-search > Settings > Variables and Secrets, and add
    these as Secrets (not plain variables, since these are all sensitive):
-     APP_SHARED_SECRET   your made-up string from step 4
-     BRAVE_API_KEY        from step 2
+     APP_SHARED_SECRET   your made-up string from step 3
      AI_PROVIDER          "gemini", "anthropic", or "openai" — whichever
-                          you got a key for in step 3 (defaults to gemini
+                          you got a key for in step 2 (defaults to gemini
                           if you skip this)
      GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
                           only the one matching AI_PROVIDER is required
 
-7. Back in the app's code, open cueme-app/src/aiSearch/config.ts and fill
+6. Back in the app's code, open cueme-app/src/aiSearch/config.ts and fill
    in the two constants:
      AI_SEARCH_BACKEND_URL — the Worker's address plus "/search". You'll
        find the base address on the Worker's own page in the Cloudflare
@@ -69,7 +64,7 @@ WHERE EACH VALUE GOES
        "https://cueme-song-search.<your-subdomain>.workers.dev". Add
        "/search" to the end.
      AI_SEARCH_APP_SECRET — must be typed exactly the same as
-       APP_SHARED_SECRET from step 6.
+       APP_SHARED_SECRET from step 5.
    Then rebuild and reinstall the app the normal way. Until this file is
    filled in, the Find a Song screen just shows a friendly "not set up
    yet" message instead of trying to call anything.
@@ -81,6 +76,21 @@ Search. If it can't find a confident match it says so rather than guessing
 — that's deliberate, not a bug. Whatever it finds lands on the normal
 paste/review screen, same as any other import, so nothing saves to your
 library until you tap Save.
+
+CHANGE, 2026-09-02: BRAVE SEARCH DROPPED
+The first version of this backend called Brave Search separately, then fed
+just the short result snippets to a plain text-only AI call. That's a real
+accuracy problem — a snippet is one or two sentences, nowhere near enough
+to contain real lyrics, so the AI was almost certainly reciting from its
+own memory of the song rather than reading anything real. Rebuilt to use
+each provider's own web-search-enabled mode (Gemini's Grounding with
+Google Search, Anthropic's web_search tool, OpenAI's web_search tool),
+which actually searches and reads a real page as part of one call, and the
+prompt now explicitly tells it not to guess from memory. If you already
+set up a Brave account for this, it's simply not used anymore — nothing to
+undo, the code just doesn't call it. Everything else you set up (Cloudflare
+token/account ID, the AI provider key, your made-up shared secret) is
+unchanged and still exactly what's needed.
 
 WHAT THIS DOESN'T DO YET, ON PURPOSE
 No payment/credit gating — this is built for your own personal use first,

@@ -1,33 +1,31 @@
 import { buildExtractionPrompt, cleanAiResponse, NOT_FOUND_SENTINEL } from './promptBuilder';
 
 describe('buildExtractionPrompt', () => {
-  it('includes the title, artist, and search results', () => {
-    const prompt = buildExtractionPrompt({
-      title: 'Wonderwall',
-      artist: 'Oasis',
-      includeChords: false,
-      results: [{ title: 'Wonderwall lyrics', url: 'https://example.com', description: 'Today is gonna be the day...' }],
-    });
-
+  it('includes the title and artist', () => {
+    const prompt = buildExtractionPrompt({ title: 'Wonderwall', artist: 'Oasis', includeChords: false });
     expect(prompt).toContain('Wonderwall');
     expect(prompt).toContain('Oasis');
-    expect(prompt).toContain('https://example.com');
     expect(prompt).toContain(NOT_FOUND_SENTINEL);
   });
 
+  it('instructs the model to search and read a real page, not answer from memory', () => {
+    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: false });
+    expect(prompt).toContain('Search the web');
+    expect(prompt).toMatch(/never fill in or guess from your own memory/i);
+  });
+
   it('instructs the model to omit chords when includeChords is false', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: false, results: [] });
+    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: false });
     expect(prompt).toContain('Do not include any chords');
   });
 
   it('instructs the model to include bracketed chords when includeChords is true', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: true, results: [] });
+    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: true });
     expect(prompt).toContain('[C]Amazing [G]grace');
   });
 
-  it('handles no search results without throwing', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: '', includeChords: false, results: [] });
-    expect(prompt).toContain('(no search results)');
+  it('handles a missing artist without throwing', () => {
+    const prompt = buildExtractionPrompt({ title: 'X', artist: '', includeChords: false });
     expect(prompt).toContain('(not specified)');
   });
 });

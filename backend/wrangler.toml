@@ -10,9 +10,14 @@ enabled = true
 # here — see SETUP.txt for the exact steps and names:
 #   APP_SHARED_SECRET   shared secret the app must send back, stops a
 #                       stranger who finds the URL from running up the bill
-#   BRAVE_API_KEY       Brave Search API key
 #   AI_PROVIDER         "gemini" | "anthropic" | "openai" (defaults to gemini)
 #   AI_MODEL            optional — overrides the default model for whichever
 #                       AI_PROVIDER is selected
 #   GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
 #                       only the one matching AI_PROVIDER is required
+#
+# No separate search API key needed — each provider does its own real web
+# search and reads real pages as part of one call (Gemini's "Grounding with
+# Google Search", Anthropic's web_search tool, OpenAI's web_search tool),
+# rather than CueMe gluing together a separate search API and a plain
+# text-only model call. Dropped Brave Search here 2026-09-02.

@@ -14,6 +14,9 @@ export function createGeminiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ parts: [{ text: prompt }] }],
+          // Grounding with Google Search — lets the model actually search
+          // and read real pages instead of answering from memory alone.
+          tools: [{ google_search: {} }],
         }),
       });
 
