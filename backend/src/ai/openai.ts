@@ -1,4 +1,5 @@
 import type { AiProvider } from './types';
+import { KNOWN_GOOD_LYRICS_DOMAINS } from '../knownGoodSources';
 
 // Cheap tier that's good at language tasks. Verify this name is still
 // current before assuming so — OpenAI's naming shifts — and override
@@ -20,7 +21,7 @@ export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
         body: JSON.stringify({
           model,
           input: prompt,
-          tools: [{ type: 'web_search' }],
+          tools: [{ type: 'web_search', filters: { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS } }],
           // Without an explicit cap, a full song's lyrics were getting cut
           // off mid-line (confirmed live, 2026-09-02) — this model spends
           // real tokens on internal reasoning before the visible output,

@@ -1,4 +1,5 @@
 import type { AiProvider } from './types';
+import { KNOWN_GOOD_LYRICS_DOMAINS } from '../knownGoodSources';
 
 // Haiku 4.5 - Anthropic's cheap tier, strong at language tasks, exactly
 // what this extraction step needs (Rusty's explicit preference for a cheap
@@ -32,7 +33,14 @@ export function createAnthropicProvider(apiKey: string, model = DEFAULT_MODEL): 
             // Basic (2025) variant, not the newer dynamic-filtering one —
             // works across the whole current model lineup including Haiku,
             // which the 2026-variant tool requires a larger model for.
-            tools: [{ type: 'web_search_20250305', name: 'web_search', max_uses: 3 }],
+            tools: [
+              {
+                type: 'web_search_20250305',
+                name: 'web_search',
+                max_uses: 3,
+                allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS,
+              },
+            ],
           }),
         });
 
