@@ -12,12 +12,15 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
 import { buildSong } from '../parsing/buildSong';
+import { sendSearchFeedback } from '../aiSearch/aiSearchApi';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'NewSong'>;
 
 export function InputScreen({ navigation, route }: Props) {
   const editSong = route.params?.editSong;
   const prefill = route.params?.prefill;
+  const aiSearchMeta = route.params?.aiSearchMeta;
   const { loadSong } = useAppState();
   const [title, setTitle] = useState(editSong?.title ?? prefill?.title ?? '');
   const [rawText, setRawText] = useState(editSong?.rawText ?? prefill?.rawText ?? '');
@@ -35,6 +38,9 @@ export function InputScreen({ navigation, route }: Props) {
       song.id = editSong.id;
       song.addedAt = editSong.addedAt;
     }
+    if (aiSearchMeta) {
+      sendSearchFeedback({ ...aiSearchMeta, rating: 'accepted' });
+    }
     await loadSong(song);
     // popTo, not navigate — see PromptScreen's "Library" link for why. This
     // screen is always pushed on top of either an existing Prompt (editing)
@@ -44,14 +50,31 @@ export function InputScreen({ navigation, route }: Props) {
     navigation.popTo('Prompt');
   };
 
+  const handleCancel = () => {
+    if (aiSearchMeta) {
+      sendSearchFeedback({ ...aiSearchMeta, rating: 'rejected' });
+    }
+    navigation.goBack();
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
-      <Text style={styles.heading} accessibilityRole="header">
-        {editSong ? 'Edit Song' : 'New Song'}
-      </Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading} accessibilityRole="header">
+          {editSong ? 'Edit Song' : 'New Song'}
+        </Text>
+        <Pressable
+          hitSlop={LINK_HIT_SLOP}
+          onPress={handleCancel}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel"
+        >
+          <Text style={styles.cancelLink}>Cancel</Text>
+        </Pressable>
+      </View>
 
       <Text style={styles.label}>Title (optional)</Text>
       <TextInput
@@ -97,11 +120,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     padding: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   heading: {
     color: '#fff',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
+  },
+  cancelLink: {
+    color: '#4f8cff',
+    fontSize: 16,
   },
   label: {
     color: '#bbb',

@@ -37,6 +37,12 @@ export function FindSongScreen({ navigation }: Props) {
       // Save, since an AI result could be wrong or garbled.
       navigation.navigate('NewSong', {
         prefill: { title: result.title, rawText: result.lyricsText },
+        aiSearchMeta: {
+          title: title.trim(),
+          artist: artist.trim(),
+          includeChords,
+          sourceUrl: result.sourceUrl,
+        },
       });
     } catch (err) {
       Alert.alert('Search failed', err instanceof Error ? err.message : String(err));

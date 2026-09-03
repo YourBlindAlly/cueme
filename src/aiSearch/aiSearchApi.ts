@@ -1,9 +1,14 @@
 import { AI_SEARCH_APP_SECRET, AI_SEARCH_BACKEND_URL } from './config';
 
+// AI_SEARCH_BACKEND_URL always ends in "/search" (see config.ts) — the
+// feedback endpoint lives alongside it on the same Worker.
+const AI_SEARCH_FEEDBACK_URL = AI_SEARCH_BACKEND_URL.replace(/\/search$/, '/feedback');
+
 export type AiSearchResult = {
   title: string;
   artist: string;
   lyricsText: string;
+  sourceUrl: string | null;
 };
 
 /**
@@ -54,5 +59,41 @@ export async function searchSongWithAi(
     title: result.title ?? title,
     artist: result.artist ?? artist,
     lyricsText: result.lyricsText,
+    sourceUrl: typeof result.sourceUrl === 'string' ? result.sourceUrl : null,
   };
+}
+
+export type AiSearchFeedback = {
+  title: string;
+  artist: string;
+  includeChords: boolean;
+  sourceUrl: string | null;
+  rating: 'accepted' | 'rejected';
+};
+
+/**
+ * Fire-and-forget: logs whether Rusty kept or discarded an AI search result,
+ * alongside the automated search logs on the same backend, so a real human
+ * verdict is visible next to the completeness gate's own reasoning. Never
+ * awaited by callers and never throws — a logging call failing shouldn't
+ * block or alarm anyone using the review screen.
+ */
+export function sendSearchFeedback(feedback: AiSearchFeedback): void {
+  if (!isAiSearchFeedbackConfigured()) {
+    return;
+  }
+  fetch(AI_SEARCH_FEEDBACK_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-App-Secret': AI_SEARCH_APP_SECRET,
+    },
+    body: JSON.stringify(feedback),
+  }).catch(() => {
+    // Best-effort only — see doc comment above.
+  });
+}
+
+function isAiSearchFeedbackConfigured(): boolean {
+  return AI_SEARCH_FEEDBACK_URL.trim().length > 0;
 }
