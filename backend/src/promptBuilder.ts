@@ -102,3 +102,38 @@ export function cleanAiResponse(raw: string): string | null {
 
   return text;
 }
+
+/**
+ * Mechanical backstop for the AI's own completeness judgment, which
+ * confirmed live (2026-09-02) does NOT reliably catch its own truncated
+ * output — three real attempts in a row on the same song all cut off
+ * mid-sentence ("...Well I don't know if I'm") without the model ever
+ * flagging INCOMPLETE, apparently because when the source page itself
+ * trails off, the model has no way to know more lyrics exist beyond what
+ * it was given. This checks the actual output text's shape instead of
+ * trusting the model's self-report: real lyrics almost always end on a
+ * real sentence (terminal punctuation) or a repeated hook/chorus line —
+ * text that just stops mid-word or mid-clause with neither is a strong,
+ * independent signal of truncation regardless of what the AI itself said.
+ */
+export function looksComplete(lyricsText: string): boolean {
+  const lines = lyricsText
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+
+  if (lines.length === 0) {
+    return false;
+  }
+
+  const lastLine = lines[lines.length - 1];
+  if (/[.!?"'”’)\]]\s*$/.test(lastLine)) {
+    return true;
+  }
+
+  // A final line that repeats an earlier line (a chorus/hook fade-out) is
+  // also a legitimate, real ending shape, even with no terminal punctuation.
+  const normalized = lines.map((line) => line.toLowerCase());
+  const lastNormalized = normalized[normalized.length - 1];
+  return normalized.slice(0, -1).includes(lastNormalized);
+}

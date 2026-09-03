@@ -5,6 +5,7 @@ import {
   cleanAiResponse,
   cleanUrlResponse,
   INCOMPLETE_SENTINEL,
+  looksComplete,
 } from './promptBuilder';
 import { fetchPageText } from './fetchPage';
 
@@ -121,6 +122,19 @@ export default {
           ? `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but it only had part of the song — try again, or add it manually.`
           : `Found a page but couldn't extract reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.`;
         return json({ error: message }, 404);
+      }
+
+      // Second, independent check — the AI's own completeness judgment
+      // above doesn't reliably catch its own truncated output (confirmed
+      // live), so this never trusts that alone.
+      if (!looksComplete(lyricsText)) {
+        logResult(false, { reason: 'incomplete_shape', sourceUrl: foundUrl });
+        return json(
+          {
+            error: `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but the result looked cut off — try again, or add it manually.`,
+          },
+          404
+        );
       }
 
       logResult(true, { sourceUrl: foundUrl });

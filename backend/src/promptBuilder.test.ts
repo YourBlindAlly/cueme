@@ -4,6 +4,7 @@ import {
   cleanAiResponse,
   cleanUrlResponse,
   INCOMPLETE_SENTINEL,
+  looksComplete,
   NOT_FOUND_SENTINEL,
 } from './promptBuilder';
 
@@ -106,5 +107,30 @@ describe('cleanAiResponse', () => {
 
   it('strips a wrapping fence with a language tag', () => {
     expect(cleanAiResponse('```text\nAmazing grace\n```')).toBe('Amazing grace');
+  });
+});
+
+describe('looksComplete', () => {
+  it('accepts lyrics ending on terminal punctuation', () => {
+    expect(looksComplete('Amazing grace\nHow sweet the sound.')).toBe(true);
+    expect(looksComplete('Is this the real life?')).toBe(true);
+    expect(looksComplete('With arms wide open!')).toBe(true);
+  });
+
+  it('accepts lyrics whose final line repeats an earlier line (a chorus fade-out)', () => {
+    expect(looksComplete('With arms wide open\nSomething else\nWith arms wide open')).toBe(true);
+  });
+
+  it('rejects text that stops mid-sentence with no punctuation and no repeat', () => {
+    expect(looksComplete("Well I just heard the news today\nWell I don't know if I'm")).toBe(false);
+  });
+
+  it('rejects empty input', () => {
+    expect(looksComplete('')).toBe(false);
+    expect(looksComplete('   ')).toBe(false);
+  });
+
+  it('is case-insensitive when checking for a repeated final line', () => {
+    expect(looksComplete('With Arms Wide Open\nSomething else\nwith arms wide open')).toBe(true);
   });
 });
