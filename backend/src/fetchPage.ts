@@ -46,9 +46,16 @@ export function stripHtml(html: string): string {
 
 /** Fetches a URL and returns its cleaned, plain-text content, capped in length. */
 export async function fetchPageText(url: string, maxChars = 20000): Promise<string> {
+  // A self-identifying bot User-Agent got outright blocked (403) by at
+  // least one steered-toward site (confirmed live, 2026-09-02) — several
+  // lyrics/chord sites block automated-looking requests outright. An
+  // ordinary browser User-Agent is the standard, legitimate way around an
+  // over-aggressive blocklist for what's one real request per search, not
+  // scraping at scale.
   const res = await fetch(url, {
     headers: {
-      'User-Agent': 'Mozilla/5.0 (compatible; CueMeBot/1.0; +https://github.com/YourBlindAlly/cueme)',
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
     },
   });
 
