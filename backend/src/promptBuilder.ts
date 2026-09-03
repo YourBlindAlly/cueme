@@ -1,28 +1,67 @@
 export const NOT_FOUND_SENTINEL = 'NOT_FOUND';
 
-export type BuildExtractionPromptInput = {
+export type SongQuery = {
   title: string;
   artist: string;
   includeChords: boolean;
 };
 
 /**
- * Builds the prompt for the AI provider's own web-search-enabled call. Kept
- * as a pure function (no network calls) so it's unit-testable. Deliberately
- * instructs the model to search and read a real page rather than answer
- * from its own memory — a model that already "knows" a famous song's
- * lyrics will otherwise recite a plausible-sounding but unverified
- * version instead of what's actually written on a real source.
+ * Step 1 of 2: ask the AI to find and return ONE real page URL, nothing
+ * else — deliberately does not ask it to reproduce, summarize, or even
+ * describe the lyrics. Asking a model to search-and-recite copyrighted
+ * lyrics in the same breath tends to trigger a copyright-caution refusal
+ * (confirmed live, 2026-09-02 — see project notes); asking it to find a
+ * source is a plain, uncontroversial search task.
  */
-export function buildExtractionPrompt(input: BuildExtractionPromptInput): string {
-  const { title, artist, includeChords } = input;
+export function buildUrlSearchPrompt({ title, artist, includeChords }: SongQuery): string {
+  const kind = includeChords ? 'chords/tab' : 'lyrics';
+  return [
+    `Search the web and find ONE real, currently-accessible web page that has the actual, complete ${kind} for this specific song. Do not summarize, describe, or reproduce any of the song's words yourself — just locate a real page and return its address.`,
+    '',
+    `Song title: ${title}`,
+    `Artist: ${artist || '(not specified)'}`,
+    '',
+    `Respond with exactly one URL and nothing else — no explanation, no markdown formatting, just the raw web address. If you can't find a real page with this song's ${kind}, respond with exactly: ${NOT_FOUND_SENTINEL}`,
+  ].join('\n');
+}
 
+/** Extracts a single URL from the AI's step-1 response, or null if not found/invalid. */
+export function cleanUrlResponse(raw: string): string | null {
+  const text = raw.trim();
+  if (text === NOT_FOUND_SENTINEL || text.length === 0) {
+    return null;
+  }
+  // The model was told to answer with just a URL, but guard against a
+  // stray wrapping sentence anyway by pulling the first http(s) URL out.
+  const match = text.match(/https?:\/\/\S+/);
+  if (!match) {
+    return null;
+  }
+  try {
+    return new URL(match[0].replace(/[).,'"]+$/, '')).toString();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Step 2 of 2: given the REAL text already fetched from that page, ask the
+ * AI to extract and reformat just the song lyrics/chords from it —
+ * reformatting text it's been handed is a fundamentally different, far
+ * less refusal-prone task than being asked to produce copyrighted content
+ * from a search or from memory.
+ */
+export function buildReformatPrompt(
+  { title, artist, includeChords }: SongQuery,
+  pageText: string
+): string {
   const chordInstructions = includeChords
     ? 'Include chords, placed inline directly before the syllable each chord change happens on, in square brackets — for example "[C]Amazing [G]grace, how [C]sweet the [F]sound". Use only chord names in the brackets (e.g. [G], [Am7], [D/F#]) — no chord diagrams, no tab notation, no strumming patterns.'
     : 'Do not include any chords, chord symbols, or brackets — plain lyrics text only.';
 
   return [
-    `Search the web and find the real, accurate lyrics${includeChords ? ' and chords' : ''} for this specific song. Only use what you actually find on a real page you search for and read — never fill in or guess from your own memory of the song, even if you recognize it confidently. If you can't find a page with reliable, complete lyrics, say so rather than guessing.`,
+    `Below is the raw text content of a real web page. Extract and reformat ONLY the actual song lyrics from it — the words that are sung — removing everything else on the page: ads, navigation, comments, related-song links, site chrome, anything that isn't a real lyric line.`,
     '',
     `Song title: ${title}`,
     `Artist: ${artist || '(not specified)'}`,
@@ -31,7 +70,10 @@ export function buildExtractionPrompt(input: BuildExtractionPromptInput): string
     '',
     "Output format: plain text only, one lyric line per line, in performance order (verses, choruses, bridge, etc., in the order they're actually sung). Do not include song structure labels, chord diagrams, tab notation, page headers/footers, ads, citations, source links, or any commentary — just the lines someone would read or sing aloud, line by line, while performing the song.",
     '',
-    `If you can't find a page with reliable, complete lyrics for this song, respond with exactly: ${NOT_FOUND_SENTINEL}`,
+    `If this page's text doesn't actually contain this song's real lyrics, respond with exactly: ${NOT_FOUND_SENTINEL}`,
+    '',
+    'PAGE TEXT:',
+    pageText,
   ].join('\n');
 }
 

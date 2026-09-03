@@ -1,32 +1,74 @@
-import { buildExtractionPrompt, cleanAiResponse, NOT_FOUND_SENTINEL } from './promptBuilder';
+import {
+  buildReformatPrompt,
+  buildUrlSearchPrompt,
+  cleanAiResponse,
+  cleanUrlResponse,
+  NOT_FOUND_SENTINEL,
+} from './promptBuilder';
 
-describe('buildExtractionPrompt', () => {
+describe('buildUrlSearchPrompt', () => {
   it('includes the title and artist', () => {
-    const prompt = buildExtractionPrompt({ title: 'Wonderwall', artist: 'Oasis', includeChords: false });
+    const prompt = buildUrlSearchPrompt({ title: 'Wonderwall', artist: 'Oasis', includeChords: false });
     expect(prompt).toContain('Wonderwall');
     expect(prompt).toContain('Oasis');
     expect(prompt).toContain(NOT_FOUND_SENTINEL);
   });
 
-  it('instructs the model to search and read a real page, not answer from memory', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: false });
-    expect(prompt).toContain('Search the web');
-    expect(prompt).toMatch(/never fill in or guess from your own memory/i);
+  it('never asks the model to reproduce or summarize the lyrics', () => {
+    const prompt = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: false });
+    expect(prompt).toMatch(/do not summarize, describe, or reproduce/i);
+  });
+
+  it('asks for lyrics pages when chords are off, chord/tab pages when on', () => {
+    const withoutChords = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: false });
+    expect(withoutChords).toContain('lyrics');
+    const withChords = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: true });
+    expect(withChords).toContain('chords/tab');
+  });
+});
+
+describe('cleanUrlResponse', () => {
+  it('returns a clean URL from a well-formed response', () => {
+    expect(cleanUrlResponse('https://example.com/song-lyrics')).toBe('https://example.com/song-lyrics');
+  });
+
+  it('extracts the URL even if the model wraps it in a sentence', () => {
+    expect(cleanUrlResponse('Here it is: https://example.com/lyrics.html — hope that helps!')).toBe(
+      'https://example.com/lyrics.html'
+    );
+  });
+
+  it('returns null for the not-found sentinel', () => {
+    expect(cleanUrlResponse(NOT_FOUND_SENTINEL)).toBeNull();
+  });
+
+  it('returns null when there is no URL at all', () => {
+    expect(cleanUrlResponse("I couldn't find one")).toBeNull();
+  });
+});
+
+describe('buildReformatPrompt', () => {
+  it('includes the page text verbatim', () => {
+    const prompt = buildReformatPrompt(
+      { title: 'X', artist: 'Y', includeChords: false },
+      'Amazing grace, how sweet the sound'
+    );
+    expect(prompt).toContain('Amazing grace, how sweet the sound');
   });
 
   it('instructs the model to omit chords when includeChords is false', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: false });
+    const prompt = buildReformatPrompt({ title: 'X', artist: 'Y', includeChords: false }, 'page text');
     expect(prompt).toContain('Do not include any chords');
   });
 
   it('instructs the model to include bracketed chords when includeChords is true', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: 'Y', includeChords: true });
+    const prompt = buildReformatPrompt({ title: 'X', artist: 'Y', includeChords: true }, 'page text');
     expect(prompt).toContain('[C]Amazing [G]grace');
   });
 
-  it('handles a missing artist without throwing', () => {
-    const prompt = buildExtractionPrompt({ title: 'X', artist: '', includeChords: false });
-    expect(prompt).toContain('(not specified)');
+  it('frames the task as reformatting given text, not producing lyrics from scratch', () => {
+    const prompt = buildReformatPrompt({ title: 'X', artist: 'Y', includeChords: false }, 'page text');
+    expect(prompt).toMatch(/raw text content of a real web page/i);
   });
 });
 

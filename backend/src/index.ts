@@ -1,5 +1,6 @@
 import { getAiProvider, type AiEnv } from './ai';
-import { buildExtractionPrompt, cleanAiResponse } from './promptBuilder';
+import { buildReformatPrompt, buildUrlSearchPrompt, cleanAiResponse, cleanUrlResponse } from './promptBuilder';
+import { fetchPageText } from './fetchPage';
 
 export interface Env extends AiEnv {
   APP_SHARED_SECRET: string;
@@ -54,6 +55,7 @@ export default {
       return json({ error: 'title is required' }, 400);
     }
 
+    const query = { title, artist, includeChords };
     const startedAt = Date.now();
     // Metadata-only logging (title/artist/success/timing), per the settled
     // per-user-only / no-content-archive decision for this feature — never
@@ -73,32 +75,52 @@ export default {
     };
 
     try {
-      // The AI provider does its own web search and reads real pages
-      // itself (see backend/src/ai/*.ts) — there's no separate search step
-      // here anymore.
       const provider = getAiProvider(env);
-      const prompt = buildExtractionPrompt({ title, artist, includeChords });
-      const raw = await provider.complete(prompt);
-      const lyricsText = cleanAiResponse(raw);
 
-      if (lyricsText === null) {
-        logResult(false, { reason: 'not_found' });
+      // Step 1: find a real source page — deliberately NOT asked to
+      // reproduce any lyrics itself, just locate one. Asking a model to
+      // search-and-recite copyrighted lyrics in the same call reliably
+      // triggers a copyright-caution refusal (confirmed live, 2026-09-02).
+      const urlPrompt = buildUrlSearchPrompt(query);
+      const urlRaw = await provider.complete(urlPrompt);
+      const foundUrl = cleanUrlResponse(urlRaw);
+
+      if (foundUrl === null) {
+        logResult(false, { reason: 'no_url_found' });
         return json(
-          { error: `Couldn't find reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
+          { error: `Couldn't find a page with lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
           404
         );
       }
 
-      logResult(true);
+      // Step 2: fetch that real page directly (plain HTTP, no AI
+      // involved), then ask the AI to reformat the text it's been handed
+      // — a fundamentally different, much less refusal-prone task than
+      // being asked to produce copyrighted lyrics from a search.
+      const pageText = await fetchPageText(foundUrl);
+      const reformatPrompt = buildReformatPrompt(query, pageText);
+      const raw = await provider.complete(reformatPrompt);
+      const lyricsText = cleanAiResponse(raw);
+
+      if (lyricsText === null) {
+        logResult(false, { reason: 'not_found_on_page', sourceUrl: foundUrl });
+        return json(
+          { error: `Found a page but couldn't extract reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
+          404
+        );
+      }
+
+      logResult(true, { sourceUrl: foundUrl });
       return json({ title, artist, lyricsText });
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       logResult(false, { error: detail });
       // `detail` surfaces the real underlying error (a provider's own API
-      // error message, a config problem like an unset/misspelled secret,
-      // etc.) — worth keeping in the response, not just the logs, since
-      // this app has no other users yet and a specific reason is far more
-      // useful for troubleshooting than a generic message every time.
+      // error message, a page-fetch failure, a config problem like an
+      // unset/misspelled secret, etc.) — worth keeping in the response,
+      // not just the logs, since this app has no other users yet and a
+      // specific reason is far more useful for troubleshooting than a
+      // generic message every time.
       return json({ error: 'Search failed — try again in a moment.', detail }, 502);
     }
   },
