@@ -132,6 +132,11 @@ export default {
         return json(
           {
             error: `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but the result looked cut off — try again, or add it manually.`,
+            // TEMPORARY, 2026-09-02: surfacing the actual rejected text's
+            // tail end to check whether looksComplete is correctly
+            // catching real truncation or being too strict — remove once
+            // that's confirmed either way.
+            debugTail: lyricsText.slice(-200),
           },
           404
         );
