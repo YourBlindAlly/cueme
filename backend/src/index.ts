@@ -92,8 +92,14 @@ export default {
       logResult(true);
       return json({ title, artist, lyricsText });
     } catch (err) {
-      logResult(false, { error: err instanceof Error ? err.message : String(err) });
-      return json({ error: 'Search failed — try again in a moment.' }, 502);
+      const detail = err instanceof Error ? err.message : String(err);
+      logResult(false, { error: detail });
+      // `detail` surfaces the real underlying error (a provider's own API
+      // error message, a config problem like an unset/misspelled secret,
+      // etc.) — worth keeping in the response, not just the logs, since
+      // this app has no other users yet and a specific reason is far more
+      // useful for troubleshooting than a generic message every time.
+      return json({ error: 'Search failed — try again in a moment.', detail }, 502);
     }
   },
 };

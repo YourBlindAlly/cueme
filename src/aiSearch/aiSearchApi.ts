@@ -34,11 +34,15 @@ export async function searchSongWithAi(
   }
 
   if (!res.ok) {
+    const errorData = data && typeof data === 'object' ? (data as { error?: unknown; detail?: unknown }) : null;
     const message =
-      data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string'
-        ? (data as { error: string }).error
-        : `Search failed (${res.status})`;
-    throw new Error(message);
+      errorData && typeof errorData.error === 'string' ? errorData.error : `Search failed (${res.status})`;
+    // `detail` (present on unexpected backend failures, not on the
+    // expected "couldn't find lyrics" case) carries the real underlying
+    // reason — appended so a failure is self-diagnosable from the app's
+    // own error alert instead of needing to dig through Worker logs.
+    const detail = errorData && typeof errorData.detail === 'string' ? errorData.detail : null;
+    throw new Error(detail ? `${message}\n\n${detail}` : message);
   }
 
   const result = data as Partial<AiSearchResult> | null;
