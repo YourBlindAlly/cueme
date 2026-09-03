@@ -27,6 +27,21 @@ describe('buildUrlSearchPrompt', () => {
     const withChords = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: true });
     expect(withChords).toContain('chords/tab');
   });
+
+  it('says nothing about excluded URLs when none are given', () => {
+    const prompt = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: false });
+    expect(prompt).not.toMatch(/already tried/i);
+  });
+
+  it('tells the model to avoid previously-tried URLs on a retry', () => {
+    const prompt = buildUrlSearchPrompt({ title: 'X', artist: 'Y', includeChords: false }, [
+      'https://example.com/bad-page',
+      'https://example.com/another-bad-page',
+    ]);
+    expect(prompt).toMatch(/already tried/i);
+    expect(prompt).toContain('https://example.com/bad-page');
+    expect(prompt).toContain('https://example.com/another-bad-page');
+  });
 });
 
 describe('cleanUrlResponse', () => {

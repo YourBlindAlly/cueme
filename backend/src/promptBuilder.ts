@@ -15,16 +15,31 @@ export type SongQuery = {
  * (confirmed live, 2026-09-02 — see project notes); asking it to find a
  * source is a plain, uncontroversial search task.
  */
-export function buildUrlSearchPrompt({ title, artist, includeChords }: SongQuery): string {
+export function buildUrlSearchPrompt(
+  { title, artist, includeChords }: SongQuery,
+  excludeUrls: string[] = []
+): string {
   const kind = includeChords ? 'chords/tab' : 'lyrics';
-  return [
+  const lines = [
     `Search the web and find ONE real, currently-accessible web page that has the actual, complete ${kind} for this specific song. Do not summarize, describe, or reproduce any of the song's words yourself — just locate a real page and return its address.`,
     '',
     `Song title: ${title}`,
     `Artist: ${artist || '(not specified)'}`,
+  ];
+
+  if (excludeUrls.length > 0) {
+    lines.push(
+      '',
+      `Do not return any of these URLs — they were already tried and turned out to be unusable (incomplete, inaccessible, or otherwise unreliable): ${excludeUrls.join(', ')}. Find a genuinely different page.`
+    );
+  }
+
+  lines.push(
     '',
-    `Respond with exactly one URL and nothing else — no explanation, no markdown formatting, just the raw web address. If you can't find a real page with this song's ${kind}, respond with exactly: ${NOT_FOUND_SENTINEL}`,
-  ].join('\n');
+    `Respond with exactly one URL and nothing else — no explanation, no markdown formatting, just the raw web address. If you can't find a real page with this song's ${kind}, respond with exactly: ${NOT_FOUND_SENTINEL}`
+  );
+
+  return lines.join('\n');
 }
 
 /** Extracts a single URL from the AI's step-1 response, or null if not found/invalid. */

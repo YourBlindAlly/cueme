@@ -1,4 +1,5 @@
 import { getAiProvider, type AiEnv } from './ai';
+import type { AiProvider } from './ai/types';
 import {
   buildReformatPrompt,
   buildUrlSearchPrompt,
@@ -6,12 +7,20 @@ import {
   cleanUrlResponse,
   INCOMPLETE_SENTINEL,
   looksComplete,
+  type SongQuery,
 } from './promptBuilder';
 import { fetchPageText } from './fetchPage';
 
 export interface Env extends AiEnv {
   APP_SHARED_SECRET: string;
 }
+
+// How many different candidate pages to try before giving an honest "this
+// didn't work" answer, per Rusty's explicit request 2026-09-02 — real
+// testing that day found the completeness gate correctly rejecting most
+// first attempts, so a single try wasn't good enough to be worth charging
+// a credit for.
+const MAX_ATTEMPTS = 3;
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -31,6 +40,65 @@ type SearchRequestBody = {
   artist?: string;
   includeChords?: boolean;
 };
+
+type AttemptResult =
+  | { status: 'success'; lyricsText: string; sourceUrl: string }
+  | { status: 'no_url' }
+  | { status: 'fetch_failed'; sourceUrl: string; error: string }
+  | { status: 'incomplete_ai_flagged'; sourceUrl: string }
+  | { status: 'incomplete_shape'; sourceUrl: string }
+  | { status: 'not_found_on_page'; sourceUrl: string };
+
+/**
+ * One full search-fetch-reformat cycle. Provider-level failures (auth, a
+ * malformed API response, etc.) are deliberately NOT caught here — those
+ * propagate up and abort the whole request immediately, since retrying the
+ * exact same broken API call three times would just hide a real,
+ * actionable error behind a generic "didn't work" message. Only content-
+ * quality problems (nothing found, fetch failed, result judged incomplete)
+ * become a retryable AttemptResult.
+ */
+async function attemptOnce(
+  provider: AiProvider,
+  query: SongQuery,
+  excludeUrls: string[]
+): Promise<AttemptResult> {
+  const urlPrompt = buildUrlSearchPrompt(query, excludeUrls);
+  const urlRaw = await provider.complete(urlPrompt);
+  const foundUrl = cleanUrlResponse(urlRaw);
+
+  if (foundUrl === null) {
+    return { status: 'no_url' };
+  }
+
+  let pageText: string;
+  try {
+    pageText = await fetchPageText(foundUrl);
+  } catch (err) {
+    return { status: 'fetch_failed', sourceUrl: foundUrl, error: err instanceof Error ? err.message : String(err) };
+  }
+
+  const reformatPrompt = buildReformatPrompt(query, pageText);
+  const raw = await provider.complete(reformatPrompt);
+  const trimmedRaw = raw.trim();
+  const lyricsText = cleanAiResponse(raw);
+
+  if (lyricsText === null) {
+    return {
+      status: trimmedRaw === INCOMPLETE_SENTINEL ? 'incomplete_ai_flagged' : 'not_found_on_page',
+      sourceUrl: foundUrl,
+    };
+  }
+
+  // Second, independent check — the AI's own completeness judgment above
+  // doesn't reliably catch its own truncated output (confirmed live,
+  // 2026-09-02), so this never trusts that alone.
+  if (!looksComplete(lyricsText)) {
+    return { status: 'incomplete_shape', sourceUrl: foundUrl };
+  }
+
+  return { status: 'success', lyricsText, sourceUrl: foundUrl };
+}
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -62,11 +130,13 @@ export default {
       return json({ error: 'title is required' }, 400);
     }
 
-    const query = { title, artist, includeChords };
+    const query: SongQuery = { title, artist, includeChords };
     const startedAt = Date.now();
-    // Metadata-only logging (title/artist/success/timing), per the settled
-    // per-user-only / no-content-archive decision for this feature — never
-    // log the actual lyrics/chords text itself.
+    // Metadata-only logging (title/artist/success/timing/attempt reasons),
+    // per the settled per-user-only / no-content-archive decision for this
+    // feature — never log the actual lyrics/chords text itself. The
+    // per-attempt reasons are exactly the "how much are we wasting on the
+    // back end" data — viewable in Cloudflare's Worker Logs.
     const logResult = (success: boolean, extra?: Record<string, unknown>) => {
       console.log(
         JSON.stringify({
@@ -83,71 +153,50 @@ export default {
 
     try {
       const provider = getAiProvider(env);
+      const triedUrls: string[] = [];
+      const attemptReasons: string[] = [];
+      let lastResult: AttemptResult | null = null;
 
-      // Step 1: find a real source page — deliberately NOT asked to
-      // reproduce any lyrics itself, just locate one. Asking a model to
-      // search-and-recite copyrighted lyrics in the same call reliably
-      // triggers a copyright-caution refusal (confirmed live, 2026-09-02).
-      const urlPrompt = buildUrlSearchPrompt(query);
-      const urlRaw = await provider.complete(urlPrompt);
-      const foundUrl = cleanUrlResponse(urlRaw);
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const result = await attemptOnce(provider, query, triedUrls);
+        lastResult = result;
+        attemptReasons.push(result.status);
 
-      if (foundUrl === null) {
-        logResult(false, { reason: 'no_url_found' });
-        return json(
-          { error: `Couldn't find a page with lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
-          404
-        );
+        if (result.status === 'success') {
+          break;
+        }
+        if ('sourceUrl' in result) {
+          triedUrls.push(result.sourceUrl);
+        }
       }
 
-      // Step 2: fetch that real page directly (plain HTTP, no AI
-      // involved), then ask the AI to reformat the text it's been handed
-      // — a fundamentally different, much less refusal-prone task than
-      // being asked to produce copyrighted lyrics from a search.
-      const pageText = await fetchPageText(foundUrl);
-      const reformatPrompt = buildReformatPrompt(query, pageText);
-      const raw = await provider.complete(reformatPrompt);
-      const trimmedRaw = raw.trim();
-      const lyricsText = cleanAiResponse(raw);
+      logResult(lastResult?.status === 'success', {
+        attempts: attemptReasons.length,
+        reasons: attemptReasons,
+        ...(lastResult && 'sourceUrl' in lastResult ? { sourceUrl: lastResult.sourceUrl } : {}),
+      });
 
-      if (lyricsText === null) {
-        // Quality gate: a real result never reaches the user unless it
-        // passed the completeness check baked into the reformat prompt —
-        // distinguishing "incomplete" from "not found" here, and logging
-        // it, is exactly what turns "does this actually work well enough
-        // to charge for" from a guess into a measurable rate over time.
-        const isIncomplete = trimmedRaw === INCOMPLETE_SENTINEL;
-        logResult(false, { reason: isIncomplete ? 'incomplete_source' : 'not_found_on_page', sourceUrl: foundUrl });
-        const message = isIncomplete
-          ? `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but it only had part of the song — try again, or add it manually.`
-          : `Found a page but couldn't extract reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.`;
-        return json({ error: message }, 404);
+      if (lastResult?.status === 'success') {
+        return json({ title, artist, lyricsText: lastResult.lyricsText });
       }
 
-      // Second, independent check — the AI's own completeness judgment
-      // above doesn't reliably catch its own truncated output (confirmed
-      // live), so this never trusts that alone.
-      if (!looksComplete(lyricsText)) {
-        logResult(false, { reason: 'incomplete_shape', sourceUrl: foundUrl });
-        return json(
-          {
-            error: `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but the result looked cut off — try again, or add it manually.`,
-          },
-          404
-        );
-      }
-
-      logResult(true, { sourceUrl: foundUrl });
-      return json({ title, artist, lyricsText });
+      // Honest final response — say plainly that multiple different
+      // sources were tried and none worked out, not just "not found" as
+      // if only a single attempt happened.
+      const triedCount = attemptReasons.length;
+      const message =
+        triedCount > 1
+          ? `Tried ${triedCount} different sources for "${title}"${artist ? ` by ${artist}` : ''} and couldn't get a complete, reliable result from any of them.`
+          : `Couldn't find a page with lyrics for "${title}"${artist ? ` by ${artist}` : ''}.`;
+      return json({ error: message }, 404);
     } catch (err) {
       const detail = err instanceof Error ? err.message : String(err);
       logResult(false, { error: detail });
       // `detail` surfaces the real underlying error (a provider's own API
-      // error message, a page-fetch failure, a config problem like an
-      // unset/misspelled secret, etc.) — worth keeping in the response,
-      // not just the logs, since this app has no other users yet and a
-      // specific reason is far more useful for troubleshooting than a
-      // generic message every time.
+      // error message, a config problem like an unset/misspelled secret,
+      // etc.) — worth keeping in the response, not just the logs, since
+      // this app has no other users yet and a specific reason is far more
+      // useful for troubleshooting than a generic message every time.
       return json({ error: 'Search failed — try again in a moment.', detail }, 502);
     }
   },
