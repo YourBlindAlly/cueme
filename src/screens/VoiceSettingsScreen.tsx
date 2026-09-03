@@ -3,6 +3,7 @@ import { Pressable, SectionList, StyleSheet, Switch, Text, View } from 'react-na
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Speech from 'expo-speech';
 import type { Voice } from 'expo-speech';
+import * as Localization from 'expo-localization';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { loadVoicePreference, saveVoicePreference } from '../speech/voicePreference';
@@ -10,6 +11,11 @@ import {
   loadReduceVoiceOverChatter,
   saveReduceVoiceOverChatter,
 } from '../speech/voiceOverPreference';
+import {
+  loadShowAllVoiceLanguages,
+  saveShowAllVoiceLanguages,
+} from '../speech/showAllVoiceLanguagesPreference';
+import { filterVoicesByLanguages, preferredLanguageCodes } from '../speech/preferredLanguages';
 import { groupVoicesByLanguage } from '../speech/groupVoicesByLanguage';
 import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
@@ -22,17 +28,25 @@ export function VoiceSettingsScreen({ navigation }: Props) {
   const [voices, setVoices] = useState<Voice[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reduceChatter, setReduceChatter] = useState(false);
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
+  // English always, plus whatever other language(s) the device itself is
+  // set to (iOS Settings > General > Language & Region) — computed once
+  // from expo-localization rather than re-derived on every render.
+  const [preferredCodes, setPreferredCodes] = useState<string[]>(['en']);
 
   useEffect(() => {
     (async () => {
-      const [available, saved, chatterSetting] = await Promise.all([
+      const [available, saved, chatterSetting, showAll] = await Promise.all([
         Speech.getAvailableVoicesAsync(),
         loadVoicePreference(),
         loadReduceVoiceOverChatter(),
+        loadShowAllVoiceLanguages(),
       ]);
       setVoices(available);
       setSelectedId(saved);
       setReduceChatter(chatterSetting);
+      setShowAllLanguages(showAll);
+      setPreferredCodes(preferredLanguageCodes(Localization.getLocales()));
     })();
     return () => {
       Speech.stop();
@@ -42,6 +56,11 @@ export function VoiceSettingsScreen({ navigation }: Props) {
   const handleToggleReduceChatter = (value: boolean) => {
     setReduceChatter(value);
     void saveReduceVoiceOverChatter(value);
+  };
+
+  const handleToggleShowAllLanguages = (value: boolean) => {
+    setShowAllLanguages(value);
+    void saveShowAllVoiceLanguages(value);
   };
 
   const handleSelect = (voice: Voice) => {
@@ -59,7 +78,11 @@ export function VoiceSettingsScreen({ navigation }: Props) {
     Speech.speak(PREVIEW_TEXT, { voice: voice.identifier });
   };
 
-  const sections = useMemo(() => groupVoicesByLanguage(voices ?? []), [voices]);
+  const sections = useMemo(() => {
+    const all = voices ?? [];
+    const filtered = showAllLanguages ? all : filterVoicesByLanguages(all, preferredCodes);
+    return groupVoicesByLanguage(filtered);
+  }, [voices, showAllLanguages, preferredCodes]);
 
   // Surfaced near the top so it's findable without scrolling a long,
   // language-grouped list — separate from the always-there "System
@@ -126,6 +149,20 @@ export function VoiceSettingsScreen({ navigation }: Props) {
           </View>
         </View>
       ) : null}
+
+      <View style={styles.chatterRow}>
+        <View style={styles.chatterTextBlock}>
+          <Text style={styles.actionLabel}>Show all languages</Text>
+          <Text style={styles.chatterHint}>
+            Off by default — only shows English and your device's other configured language(s).
+          </Text>
+        </View>
+        <Switch
+          value={showAllLanguages}
+          onValueChange={handleToggleShowAllLanguages}
+          accessibilityLabel="Show all languages"
+        />
+      </View>
 
       <SectionList
         sections={sections}
