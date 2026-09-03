@@ -10,4 +10,8 @@
  * rendered — hence steering toward known-good sources rather than letting
  * search go anywhere.
  */
-export const KNOWN_GOOD_LYRICS_DOMAINS = ['azlyrics.com', 'ultimate-guitar.com', 'e-chords.com'];
+// azlyrics.com and e-chords.com were dropped 2026-09-02 — both confirmed
+// live to block plain automated fetches (AZLyrics shows a CAPTCHA/bot-check
+// wall, e-chords.com returns a flat 403), regardless of User-Agent. Down to
+// the one domain this project has actual prior confirmed success fetching.
+export const KNOWN_GOOD_LYRICS_DOMAINS = ['ultimate-guitar.com'];
