@@ -38,7 +38,9 @@ export function createAnthropicProvider(apiKey: string, model = DEFAULT_MODEL): 
                 type: 'web_search_20250305',
                 name: 'web_search',
                 max_uses: 3,
-                allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS,
+                ...(KNOWN_GOOD_LYRICS_DOMAINS.length > 0
+                  ? { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS }
+                  : {}),
               },
             ],
           }),

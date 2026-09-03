@@ -1,5 +1,11 @@
 import { getAiProvider, type AiEnv } from './ai';
-import { buildReformatPrompt, buildUrlSearchPrompt, cleanAiResponse, cleanUrlResponse } from './promptBuilder';
+import {
+  buildReformatPrompt,
+  buildUrlSearchPrompt,
+  cleanAiResponse,
+  cleanUrlResponse,
+  INCOMPLETE_SENTINEL,
+} from './promptBuilder';
 import { fetchPageText } from './fetchPage';
 
 export interface Env extends AiEnv {
@@ -100,14 +106,21 @@ export default {
       const pageText = await fetchPageText(foundUrl);
       const reformatPrompt = buildReformatPrompt(query, pageText);
       const raw = await provider.complete(reformatPrompt);
+      const trimmedRaw = raw.trim();
       const lyricsText = cleanAiResponse(raw);
 
       if (lyricsText === null) {
-        logResult(false, { reason: 'not_found_on_page', sourceUrl: foundUrl });
-        return json(
-          { error: `Found a page but couldn't extract reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.` },
-          404
-        );
+        // Quality gate: a real result never reaches the user unless it
+        // passed the completeness check baked into the reformat prompt —
+        // distinguishing "incomplete" from "not found" here, and logging
+        // it, is exactly what turns "does this actually work well enough
+        // to charge for" from a guess into a measurable rate over time.
+        const isIncomplete = trimmedRaw === INCOMPLETE_SENTINEL;
+        logResult(false, { reason: isIncomplete ? 'incomplete_source' : 'not_found_on_page', sourceUrl: foundUrl });
+        const message = isIncomplete
+          ? `Found a page for "${title}"${artist ? ` by ${artist}` : ''}, but it only had part of the song — try again, or add it manually.`
+          : `Found a page but couldn't extract reliable lyrics for "${title}"${artist ? ` by ${artist}` : ''}.`;
+        return json({ error: message }, 404);
       }
 
       logResult(true, { sourceUrl: foundUrl });

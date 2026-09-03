@@ -3,6 +3,7 @@ import {
   buildUrlSearchPrompt,
   cleanAiResponse,
   cleanUrlResponse,
+  INCOMPLETE_SENTINEL,
   NOT_FOUND_SENTINEL,
 } from './promptBuilder';
 
@@ -70,6 +71,12 @@ describe('buildReformatPrompt', () => {
     const prompt = buildReformatPrompt({ title: 'X', artist: 'Y', includeChords: false }, 'page text');
     expect(prompt).toMatch(/raw text content of a real web page/i);
   });
+
+  it('instructs the model to flag an incomplete source rather than pass along a partial result', () => {
+    const prompt = buildReformatPrompt({ title: 'X', artist: 'Y', includeChords: false }, 'page text');
+    expect(prompt).toContain(INCOMPLETE_SENTINEL);
+    expect(prompt).toMatch(/never guess, invent, or fill in the missing part/i);
+  });
 });
 
 describe('cleanAiResponse', () => {
@@ -80,6 +87,11 @@ describe('cleanAiResponse', () => {
   it('returns null for the not-found sentinel', () => {
     expect(cleanAiResponse(NOT_FOUND_SENTINEL)).toBeNull();
     expect(cleanAiResponse(`  ${NOT_FOUND_SENTINEL}  `)).toBeNull();
+  });
+
+  it('returns null for the incomplete-source sentinel', () => {
+    expect(cleanAiResponse(INCOMPLETE_SENTINEL)).toBeNull();
+    expect(cleanAiResponse(`  ${INCOMPLETE_SENTINEL}  `)).toBeNull();
   });
 
   it('returns null for an empty response', () => {

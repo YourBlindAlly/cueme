@@ -10,8 +10,13 @@
  * rendered — hence steering toward known-good sources rather than letting
  * search go anywhere.
  */
-// azlyrics.com and e-chords.com were dropped 2026-09-02 — both confirmed
-// live to block plain automated fetches (AZLyrics shows a CAPTCHA/bot-check
-// wall, e-chords.com returns a flat 403), regardless of User-Agent. Down to
-// the one domain this project has actual prior confirmed success fetching.
-export const KNOWN_GOOD_LYRICS_DOMAINS = ['ultimate-guitar.com'];
+// Abandoned 2026-09-02 — restricting to a hand-picked domain list ran into
+// two dead ends in a row: azlyrics.com/e-chords.com actively block
+// automated fetches (CAPTCHA wall / flat 403), and narrowing to just
+// ultimate-guitar.com made many real searches come back with no page found
+// at all. Guessing at sites one at a time doesn't scale. Replaced by a real
+// quality gate instead (see promptBuilder.ts's completeness check) — search
+// stays unrestricted, but an incomplete result is caught and rejected
+// rather than ever silently handed to the user, and every rejection is
+// logged so the real success rate is measurable instead of guessed at.
+export const KNOWN_GOOD_LYRICS_DOMAINS: string[] = [];

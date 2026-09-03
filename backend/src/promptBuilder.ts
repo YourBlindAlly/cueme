@@ -1,4 +1,5 @@
 export const NOT_FOUND_SENTINEL = 'NOT_FOUND';
+export const INCOMPLETE_SENTINEL = 'INCOMPLETE';
 
 export type SongQuery = {
   title: string;
@@ -72,6 +73,8 @@ export function buildReformatPrompt(
     '',
     `If this page's text doesn't actually contain this song's real lyrics, respond with exactly: ${NOT_FOUND_SENTINEL}`,
     '',
+    `Quality check, important: some pages only show part of a song, or the text below is cut off before reaching a real ending. Look at whether what you're extracting reaches a genuine, natural conclusion — a final chorus, a clear closing line, a fade-out repeat — versus just stopping mid-verse or mid-sentence with nothing that reads like an ending. If it looks cut short, respond with exactly: ${INCOMPLETE_SENTINEL} — never guess, invent, or fill in the missing part yourself, and never hand back a partial result as if it were the whole song.`,
+    '',
     'PAGE TEXT:',
     pageText,
   ].join('\n');
@@ -80,7 +83,10 @@ export function buildReformatPrompt(
 /**
  * Cleans up the AI's raw response: strips a wrapping markdown code fence if
  * the model added one despite instructions, and returns null for the
- * not-found sentinel or an empty response.
+ * not-found sentinel, the incomplete-source sentinel, or an empty
+ * response — callers that need to distinguish "not found" from
+ * "incomplete" for logging should check the raw trimmed text against
+ * NOT_FOUND_SENTINEL/INCOMPLETE_SENTINEL themselves before calling this.
  */
 export function cleanAiResponse(raw: string): string | null {
   let text = raw.trim();
@@ -90,7 +96,7 @@ export function cleanAiResponse(raw: string): string | null {
     text = fenceMatch[1].trim();
   }
 
-  if (text === NOT_FOUND_SENTINEL || text.length === 0) {
+  if (text === NOT_FOUND_SENTINEL || text === INCOMPLETE_SENTINEL || text.length === 0) {
     return null;
   }
 

@@ -21,7 +21,11 @@ export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
         body: JSON.stringify({
           model,
           input: prompt,
-          tools: [{ type: 'web_search', filters: { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS } }],
+          tools: [
+            KNOWN_GOOD_LYRICS_DOMAINS.length > 0
+              ? { type: 'web_search', filters: { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS } }
+              : { type: 'web_search' },
+          ],
           // Without an explicit cap, a full song's lyrics were getting cut
           // off mid-line (confirmed live, 2026-09-02) — this model spends
           // real tokens on internal reasoning before the visible output,
