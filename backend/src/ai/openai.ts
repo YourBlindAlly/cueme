@@ -21,6 +21,12 @@ export function createOpenAiProvider(apiKey: string, model = DEFAULT_MODEL): AiP
           model,
           input: prompt,
           tools: [{ type: 'web_search' }],
+          // Without an explicit cap, a full song's lyrics were getting cut
+          // off mid-line (confirmed live, 2026-09-02) — this model spends
+          // real tokens on internal reasoning before the visible output,
+          // so the ceiling needs real headroom, not just enough for the
+          // lyrics text alone.
+          max_output_tokens: 8192,
         }),
       });
 
