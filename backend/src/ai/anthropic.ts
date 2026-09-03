@@ -1,5 +1,15 @@
 import type { AiProvider } from './types';
-import { KNOWN_GOOD_LYRICS_DOMAINS } from '../knownGoodSources';
+import { BLOCKED_LYRICS_DOMAINS, KNOWN_GOOD_LYRICS_DOMAINS } from '../knownGoodSources';
+
+function domainFilterParams(): Record<string, unknown> {
+  if (KNOWN_GOOD_LYRICS_DOMAINS.length > 0) {
+    return { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS };
+  }
+  if (BLOCKED_LYRICS_DOMAINS.length > 0) {
+    return { blocked_domains: BLOCKED_LYRICS_DOMAINS };
+  }
+  return {};
+}
 
 // Haiku 4.5 - Anthropic's cheap tier, strong at language tasks, exactly
 // what this extraction step needs (Rusty's explicit preference for a cheap
@@ -38,9 +48,7 @@ export function createAnthropicProvider(apiKey: string, model = DEFAULT_MODEL): 
                 type: 'web_search_20250305',
                 name: 'web_search',
                 max_uses: 3,
-                ...(KNOWN_GOOD_LYRICS_DOMAINS.length > 0
-                  ? { allowed_domains: KNOWN_GOOD_LYRICS_DOMAINS }
-                  : {}),
+                ...domainFilterParams(),
               },
             ],
           }),
