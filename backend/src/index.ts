@@ -41,6 +41,14 @@ type SearchRequestBody = {
   includeChords?: boolean;
 };
 
+type FeedbackRequestBody = {
+  title?: string;
+  artist?: string;
+  includeChords?: boolean;
+  sourceUrl?: string;
+  rating?: string;
+};
+
 type AttemptResult =
   | { status: 'success'; lyricsText: string; sourceUrl: string }
   | { status: 'no_url' }
@@ -100,6 +108,41 @@ async function attemptOnce(
   return { status: 'success', lyricsText, sourceUrl: foundUrl };
 }
 
+/**
+ * A human verdict on one search result — cancelling the review screen
+ * without saving logs 'rejected', saving logs 'accepted' — sitting
+ * alongside the automated song_search logs from the same event, so a real
+ * human "this was actually bad" (or good) signal is visible next to the
+ * gate's own mechanical reasoning, not just inferred from it. Metadata
+ * only, same as everywhere else in this feature — never the lyrics text.
+ */
+async function handleFeedback(request: Request): Promise<Response> {
+  let body: FeedbackRequestBody;
+  try {
+    body = await request.json();
+  } catch {
+    return json({ error: 'Invalid JSON body' }, 400);
+  }
+
+  const rating = body.rating === 'accepted' || body.rating === 'rejected' ? body.rating : null;
+  if (!rating) {
+    return json({ error: 'rating must be "accepted" or "rejected"' }, 400);
+  }
+
+  console.log(
+    JSON.stringify({
+      event: 'song_search_feedback',
+      title: (body.title ?? '').trim(),
+      artist: (body.artist ?? '').trim(),
+      includeChords: body.includeChords === true,
+      sourceUrl: body.sourceUrl ?? null,
+      rating,
+    })
+  );
+
+  return json({ ok: true });
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') {
@@ -107,12 +150,16 @@ export default {
     }
 
     const url = new URL(request.url);
-    if (url.pathname !== '/search' || request.method !== 'POST') {
+    if (request.method !== 'POST' || (url.pathname !== '/search' && url.pathname !== '/feedback')) {
       return json({ error: 'Not found' }, 404);
     }
 
     if (!env.APP_SHARED_SECRET || request.headers.get('X-App-Secret') !== env.APP_SHARED_SECRET) {
       return json({ error: 'Unauthorized' }, 401);
+    }
+
+    if (url.pathname === '/feedback') {
+      return handleFeedback(request);
     }
 
     let body: SearchRequestBody;
@@ -177,7 +224,7 @@ export default {
       });
 
       if (lastResult?.status === 'success') {
-        return json({ title, artist, lyricsText: lastResult.lyricsText });
+        return json({ title, artist, lyricsText: lastResult.lyricsText, sourceUrl: lastResult.sourceUrl });
       }
 
       // Honest final response — say plainly that multiple different

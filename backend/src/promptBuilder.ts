@@ -126,18 +126,28 @@ export function cleanAiResponse(raw: string): string | null {
  * flagging INCOMPLETE, apparently because when the source page itself
  * trails off, the model has no way to know more lyrics exist beyond what
  * it was given. This checks the actual output text's shape instead of
- * trusting the model's self-report: real lyrics almost always end on a
- * real sentence (terminal punctuation) or a repeated hook/chorus line —
- * text that just stops mid-word or mid-clause with neither is a strong,
- * independent signal of truncation regardless of what the AI itself said.
+ * trusting the model's self-report.
+ *
+ * Two independent checks, both must pass:
+ *  - Length: a real song is essentially never under MIN_LINES lines once
+ *    reformatted one-line-per-lyric — confirmed live 2026-09-03 that a
+ *    3-4 line fragment reached the app anyway, because the ending-shape
+ *    check below has nothing to say about overall length at all. This
+ *    catches that class of failure directly.
+ *  - Ending shape: real lyrics almost always end on a real sentence
+ *    (terminal punctuation) or a repeated hook/chorus line — text that
+ *    just stops mid-word or mid-clause with neither is a strong,
+ *    independent signal of truncation regardless of what the AI said.
  */
+const MIN_LINES = 12;
+
 export function looksComplete(lyricsText: string): boolean {
   const lines = lyricsText
     .split('\n')
     .map((line) => line.trim())
     .filter((line) => line.length > 0);
 
-  if (lines.length === 0) {
+  if (lines.length < MIN_LINES) {
     return false;
   }
 

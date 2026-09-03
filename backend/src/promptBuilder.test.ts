@@ -126,18 +126,29 @@ describe('cleanAiResponse', () => {
 });
 
 describe('looksComplete', () => {
-  it('accepts lyrics ending on terminal punctuation', () => {
-    expect(looksComplete('Amazing grace\nHow sweet the sound.')).toBe(true);
-    expect(looksComplete('Is this the real life?')).toBe(true);
-    expect(looksComplete('With arms wide open!')).toBe(true);
+  // Generic, non-lyric placeholder lines — long enough to clear MIN_LINES —
+  // used to isolate the ending-shape checks from the length check below.
+  function lines(count: number): string[] {
+    return Array.from({ length: count }, (_, i) => `Line number ${i + 1}`);
+  }
+
+  it('accepts a long-enough result ending on terminal punctuation', () => {
+    const body = [...lines(11), 'This is the final line.'].join('\n');
+    expect(looksComplete(body)).toBe(true);
   });
 
-  it('accepts lyrics whose final line repeats an earlier line (a chorus fade-out)', () => {
-    expect(looksComplete('With arms wide open\nSomething else\nWith arms wide open')).toBe(true);
+  it('accepts a long-enough result whose final line repeats an earlier line (a chorus fade-out)', () => {
+    const body = ['Chorus line here', ...lines(11), 'Chorus line here'].join('\n');
+    expect(looksComplete(body)).toBe(true);
   });
 
-  it('rejects text that stops mid-sentence with no punctuation and no repeat', () => {
-    expect(looksComplete("Well I just heard the news today\nWell I don't know if I'm")).toBe(false);
+  it('rejects a long-enough result that stops mid-sentence with no punctuation and no repeat', () => {
+    const body = [...lines(11), 'And then it just stops'].join('\n');
+    expect(looksComplete(body)).toBe(false);
+  });
+
+  it('rejects a short fragment even if it happens to end cleanly — confirmed live 2026-09-03, the ending-shape check alone let this through', () => {
+    expect(looksComplete('Line one\nLine two\nLine three.')).toBe(false);
   });
 
   it('rejects empty input', () => {
@@ -146,6 +157,7 @@ describe('looksComplete', () => {
   });
 
   it('is case-insensitive when checking for a repeated final line', () => {
-    expect(looksComplete('With Arms Wide Open\nSomething else\nwith arms wide open')).toBe(true);
+    const body = ['Chorus Line Here', ...lines(11), 'chorus line here'].join('\n');
+    expect(looksComplete(body)).toBe(true);
   });
 });
