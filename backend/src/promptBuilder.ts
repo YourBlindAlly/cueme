@@ -29,7 +29,7 @@ export function buildExtractionPrompt(input: BuildExtractionPromptInput): string
     '',
     chordInstructions,
     '',
-    "Output format: plain text only, one lyric line per line, in performance order (verses, choruses, bridge, etc., in the order they're actually sung). Do not include song structure labels, chord diagrams, tab notation, page headers/footers, ads, or any commentary — just the lines someone would read or sing aloud, line by line, while performing the song.",
+    "Output format: plain text only, one lyric line per line, in performance order (verses, choruses, bridge, etc., in the order they're actually sung). Do not include song structure labels, chord diagrams, tab notation, page headers/footers, ads, citations, source links, or any commentary — just the lines someone would read or sing aloud, line by line, while performing the song.",
     '',
     `If you can't find a page with reliable, complete lyrics for this song, respond with exactly: ${NOT_FOUND_SENTINEL}`,
   ].join('\n');
