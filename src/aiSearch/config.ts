@@ -17,8 +17,8 @@
  *    before any wider release.
  *
  * Until AI_SEARCH_BACKEND_URL is set (locally for testing, or injected at
- * build time for a real build), the Find a Song screen shows a friendly
- * "not set up yet" message instead of attempting a request — everything
+ * build time for a real build), the Search for a Song screen shows a
+ * friendly "not set up yet" message instead of attempting a request — everything
  * else in the app works fine without it, same pattern as the Dropbox app
  * key in cloud/dropbox/config.ts.
  */

@@ -66,7 +66,7 @@ export function FindSongScreen({ navigation }: Props) {
           <Text style={styles.backLink}>Back</Text>
         </Pressable>
         <Text style={styles.heading} accessibilityRole="header">
-          Find a Song
+          Search for a Song
         </Text>
       </View>
 
@@ -77,6 +77,12 @@ export function FindSongScreen({ navigation }: Props) {
         </Text>
       ) : (
         <>
+          <Text style={styles.experimentalNotice}>
+            Experimental: this searches the web for lyrics and won't always find a complete
+            result. If it doesn't work, nothing is lost, you can just paste the lyrics in
+            yourself instead.
+          </Text>
+
           <Text style={styles.label}>Title</Text>
           <TextInput
             style={styles.input}
@@ -201,5 +207,11 @@ const styles = StyleSheet.create({
   notConfiguredText: {
     color: '#999',
     fontSize: 15,
+  },
+  experimentalNotice: {
+    color: '#e0a640',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
   },
 });

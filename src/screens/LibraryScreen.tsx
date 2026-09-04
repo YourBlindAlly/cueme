@@ -128,17 +128,17 @@ export function LibraryScreen({ navigation }: Props) {
           style={styles.actionButton}
           onPress={() => navigation.navigate('NewSong')}
           accessibilityRole="button"
-          accessibilityLabel="Paste New Song"
+          accessibilityLabel="Add a Song"
         >
-          <Text style={styles.actionButtonText}>Paste New Song</Text>
+          <Text style={styles.actionButtonText}>Add a Song</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
           onPress={() => navigation.navigate('FindSong')}
           accessibilityRole="button"
-          accessibilityLabel="Find a Song"
+          accessibilityLabel="Search for a Song"
         >
-          <Text style={styles.actionButtonText}>Find a Song</Text>
+          <Text style={styles.actionButtonText}>Search for a Song</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}

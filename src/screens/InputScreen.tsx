@@ -64,7 +64,7 @@ export function InputScreen({ navigation, route }: Props) {
     >
       <View style={styles.headerRow}>
         <Text style={styles.heading} accessibilityRole="header">
-          {editSong ? 'Edit Song' : 'New Song'}
+          {editSong ? 'Edit Song' : 'Add a Song'}
         </Text>
         <Pressable
           hitSlop={LINK_HIT_SLOP}
