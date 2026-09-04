@@ -15,10 +15,13 @@ import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
 import { SetlistsScreen } from './src/screens/SetlistsScreen';
 import { SetlistCreatorScreen } from './src/screens/SetlistCreatorScreen';
 import { FindSongScreen } from './src/screens/FindSongScreen';
+import { AboutScreen } from './src/screens/AboutScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
 import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
 import { configureAudioSession } from './src/feedback/feedback';
 import { loadActiveSong } from './src/storage/activeSong';
+import { hasLaunchedBefore, markLaunched } from './src/library/firstLaunchPreference';
+import { seedDemoSongs } from './src/library/seedDemoSongs';
 import type { RootStackParamList } from './src/navigation/types';
 import type { Song } from './src/types';
 
@@ -58,17 +61,27 @@ const darkTheme = {
 export default function App() {
   const [initialSong, setInitialSong] = useState<Song | null>(null);
   const [isReady, setIsReady] = useState(false);
+  const [initialRoute, setInitialRoute] = useState<keyof RootStackParamList>('Library');
 
   useEffect(() => {
     (async () => {
       const startedAt = Date.now();
       await configureAudioSession();
       const stored = await loadActiveSong();
+      const isFirstLaunch = !(await hasLaunchedBefore());
+      if (isFirstLaunch) {
+        await seedDemoSongs();
+        await markLaunched();
+      }
       const elapsed = Date.now() - startedAt;
       if (elapsed < MINIMUM_SPLASH_MS) {
         await delay(MINIMUM_SPLASH_MS - elapsed);
       }
       setInitialSong(stored);
+      // On first launch, open on About instead of the empty Library so a new
+      // user sees what CueMe is and how to get started before anything
+      // else — every launch after that goes straight to Library as usual.
+      setInitialRoute(isFirstLaunch ? 'About' : 'Library');
       setIsReady(true);
       await SplashScreen.hideAsync();
     })();
@@ -93,7 +106,9 @@ export default function App() {
               // active last time — dropping straight into a song on load is
               // for right after picking or pasting one, not for a cold app
               // launch (Rusty's own distinction, clarified 2026-08-27).
-              initialRouteName="Library"
+              // Exception: a genuine first launch opens on About instead,
+              // set above alongside the demo-song seeding.
+              initialRouteName={initialRoute}
               screenOptions={{ headerShown: false }}
             >
               <Stack.Screen name="Library" component={LibraryScreen} />
@@ -105,6 +120,7 @@ export default function App() {
               <Stack.Screen name="Setlists" component={SetlistsScreen} />
               <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
               <Stack.Screen name="FindSong" component={FindSongScreen} />
+              <Stack.Screen name="About" component={AboutScreen} />
             </Stack.Navigator>
           </NavigationContainer>
         </AppStateProvider>

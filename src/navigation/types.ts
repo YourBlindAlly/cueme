@@ -19,4 +19,5 @@ export type RootStackParamList = {
   Setlists: undefined;
   SetlistCreator: undefined;
   FindSong: undefined;
+  About: undefined;
 };

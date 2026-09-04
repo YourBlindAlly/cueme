@@ -35,4 +35,39 @@ describe('isJunkLine', () => {
   it('does not flag a real lyric line that merely contains the word "tip"', () => {
     expect(isJunkLine("I'll leave a tip, then I'm gone")).toBe(false);
   });
+
+  it('flags freeform performance notes beyond just capo', () => {
+    expect(isJunkLine('Tuning: Drop D')).toBe(true);
+    expect(isJunkLine('Strumming pattern: D D U U D U')).toBe(true);
+    expect(isJunkLine('Drop D tuning')).toBe(true);
+    expect(isJunkLine('Open tuning')).toBe(true);
+  });
+
+  it('does not flag a real lyric line that happens to start with "Strummin\'"', () => {
+    // Shaped after a real false-positive found live 2026-09-04 (a genuine
+    // lyric line starting with "Strummin'", not "strum"/"strumming"), using
+    // an invented line here rather than quoting the actual song.
+    expect(isJunkLine("Strummin' along under the summer sky tonight")).toBe(false);
+  });
+
+  it('flags a standalone six-string tab diagram line', () => {
+    expect(isJunkLine('e|--------------------------------|')).toBe(true);
+    expect(isJunkLine('G|-777/99/1111\\9/11/12\\999/11-11\\-9h11p9h11p9h11-|')).toBe(true);
+  });
+
+  it('flags a tab diagram line using flat/sharp alternate-tuning string labels', () => {
+    expect(isJunkLine('Eb|-------0------|')).toBe(true);
+    expect(isJunkLine('F#|-------0------|')).toBe(true);
+  });
+
+  it('flags an inline chord-plus-tab-riff line even without brackets around every chord', () => {
+    expect(isJunkLine('[D5]       [A5]       [G5]       [A5]   G|-6--7--9--7--6--7-|')).toBe(true);
+    expect(isJunkLine('[D5]       [A5]        [G5]               A5 G|-6--7--9--7--6--7-|')).toBe(
+      true
+    );
+  });
+
+  it('does not flag a real lyric line', () => {
+    expect(isJunkLine('And the cat sat quietly on the mat by the door')).toBe(false);
+  });
 });

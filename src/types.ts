@@ -9,7 +9,8 @@ export type SectionMarker = {
 export type SongSource =
   | { type: 'manual' }
   | { type: 'file' }
-  | { type: 'dropbox'; path: string };
+  | { type: 'dropbox'; path: string }
+  | { type: 'demo' };
 
 export type Song = {
   id: string;

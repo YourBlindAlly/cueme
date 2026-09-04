@@ -13,6 +13,7 @@ import {
   SORT_MODE_LABEL,
 } from '../library/librarySortPreference';
 import { sortLibraryForDisplay } from '../library/sortLibrary';
+import { LINK_HIT_SLOP } from '../ui/hitSlop';
 import type { Song } from '../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Library'>;
@@ -21,6 +22,7 @@ const SOURCE_LABEL: Record<Song['source']['type'], string> = {
   manual: 'Pasted',
   file: 'Imported file',
   dropbox: 'Dropbox',
+  demo: 'Demo song',
 };
 
 export function LibraryScreen({ navigation }: Props) {
@@ -99,9 +101,19 @@ export function LibraryScreen({ navigation }: Props) {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <Text style={styles.heading} accessibilityRole="header">
-        Your Songs
-      </Text>
+      <View style={styles.headerRow}>
+        <Text style={styles.heading} accessibilityRole="header">
+          Your Songs
+        </Text>
+        <Pressable
+          hitSlop={LINK_HIT_SLOP}
+          onPress={() => navigation.navigate('About')}
+          accessibilityRole="button"
+          accessibilityLabel="About CueMe"
+        >
+          <Text style={styles.aboutLink}>About</Text>
+        </Pressable>
+      </View>
 
       {/* Ordered by how often each is actually used — Dropbox and Setlists
           first, Import File last, since it's both the least-used path now
@@ -136,9 +148,9 @@ export function LibraryScreen({ navigation }: Props) {
           style={styles.actionButton}
           onPress={() => navigation.navigate('FindSong')}
           accessibilityRole="button"
-          accessibilityLabel="Search for a Song"
+          accessibilityLabel="Search for a Song: Experimental"
         >
-          <Text style={styles.actionButtonText}>Search for a Song</Text>
+          <Text style={styles.actionButtonText}>Search for a Song: Experimental</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}
@@ -218,11 +230,20 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     padding: 20,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
   heading: {
     color: '#fff',
     fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
+  },
+  aboutLink: {
+    color: '#4f8cff',
+    fontSize: 16,
   },
   actionsRow: {
     flexDirection: 'row',
