@@ -21,6 +21,15 @@ module.exports = {
     ios: {
       supportsTablet: true,
       bundleIdentifier: isPreview ? 'com.rustyperez.cueme.preview' : 'com.rustyperez.cueme',
+      // App Store Connect rejects an upload whose CFBundleVersion isn't
+      // strictly higher than the last one it received for this app -
+      // confirmed live 2026-09-04 ("The bundle version must be higher than
+      // the previously uploaded version"). BUILD_NUMBER is set by
+      // build-testflight.yml to the GitHub Actions run number, which only
+      // ever increases - defaults to "1" for the unsigned/preview builds,
+      // which don't go through App Store Connect at all so this never
+      // matters for them.
+      buildNumber: process.env.BUILD_NUMBER || '1',
       infoPlist: {
         UIBackgroundModes: ['audio'],
         GCSupportsControllerUserInteraction: true,

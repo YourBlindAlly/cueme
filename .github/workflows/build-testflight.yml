@@ -70,6 +70,8 @@ jobs:
           echo "$PROFILE_BASE64" | base64 --decode > ~/Library/MobileDevice/Provisioning\ Profiles/CueMe.mobileprovision
 
       - name: Prebuild native iOS project
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
         run: npx expo prebuild --platform ios --non-interactive
 
       - name: Find workspace and scheme
