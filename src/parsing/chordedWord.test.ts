@@ -49,6 +49,18 @@ describe('tokenizeChordedLine', () => {
     expect(tokenizeChordedLine('won[C]der[D]ful')).toEqual([{ chord: 'C', text: 'wonderful' }]);
   });
 
+  it('keeps a different chord glued to the end of a word instead of dropping it, attaching it forward to the next word', () => {
+    // Found live 2026-09-04 via the new chord-line-merge feature — a chord
+    // glued to a word's front and a DIFFERENT chord glued to its back (the
+    // chord changes right as that word ends) was silently discarding the
+    // second chord entirely.
+    expect(tokenizeChordedLine('[G]Real[C] lyric[D] line')).toEqual([
+      { chord: 'G', text: 'Real' },
+      { chord: 'C', text: 'lyric' },
+      { chord: 'D', text: 'line' },
+    ]);
+  });
+
   it('handles a line with no chords at all', () => {
     expect(tokenizeChordedLine('Plain lyric line')).toEqual([
       { chord: null, text: 'Plain' },

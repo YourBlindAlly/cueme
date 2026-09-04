@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -12,33 +12,39 @@ const CONTACT_EMAIL = 'cueme@gmail.com';
 
 export function AboutScreen({ navigation }: Props) {
   // On a genuine first launch, About is the root screen — there's nothing to
-  // go back to, so "Back" instead takes a new user on into the (freshly
-  // seeded) Library rather than doing nothing.
-  const handleBack = () => {
-    if (navigation.canGoBack()) {
-      navigation.goBack();
-    } else {
-      navigation.navigate('Library');
-    }
-  };
+  // go back to. A "Back" link there would be confusing (nothing was
+  // navigated away from), so first-time visitors get a clear "Get Started"
+  // button at the end of the content instead, and no Back link at all.
+  const isFirstLaunch = !navigation.canGoBack();
+  const handleContinue = () => navigation.navigate('Library');
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.headerRow}>
-        <Pressable
-          hitSlop={LINK_HIT_SLOP}
-          onPress={handleBack}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <Text style={styles.backLink}>Back</Text>
-        </Pressable>
+        {!isFirstLaunch && (
+          <Pressable
+            hitSlop={LINK_HIT_SLOP}
+            onPress={() => navigation.goBack()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Text style={styles.backLink}>Back</Text>
+          </Pressable>
+        )}
         <Text style={styles.heading} accessibilityRole="header">
           About CueMe
         </Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent}>
+        <Image
+          source={require('../../assets/splash-icon.png')}
+          style={styles.logo}
+          resizeMode="contain"
+          accessibilityIgnoresInvertColors
+          accessible={false}
+        />
+
         <Text style={styles.paragraph}>
           CueMe reads your lyrics out loud, one line at a time, while you perform live. I built
           it for myself. I'm a blind singer-songwriter, and reading a lyric sheet on stage was
@@ -63,6 +69,17 @@ export function AboutScreen({ navigation }: Props) {
         </Text>
 
         <Text style={styles.versionText}>Version {Constants.expoConfig?.version ?? '1.0.0'}</Text>
+
+        {isFirstLaunch && (
+          <Pressable
+            style={styles.continueButton}
+            onPress={handleContinue}
+            accessibilityRole="button"
+            accessibilityLabel="Get Started"
+          >
+            <Text style={styles.continueButtonText}>Get Started</Text>
+          </Pressable>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -79,6 +96,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 14,
     marginBottom: 20,
+    minHeight: 24,
   },
   backLink: {
     color: '#4f8cff',
@@ -92,6 +110,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 30,
   },
+  logo: {
+    width: '100%',
+    height: 140,
+    marginBottom: 24,
+  },
   paragraph: {
     color: '#fff',
     fontSize: 16,
@@ -102,5 +125,17 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 13,
     marginTop: 10,
+  },
+  continueButton: {
+    backgroundColor: '#2f6fed',
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 28,
+  },
+  continueButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

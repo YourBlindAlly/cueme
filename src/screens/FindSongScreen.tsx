@@ -78,9 +78,9 @@ export function FindSongScreen({ navigation }: Props) {
       ) : (
         <>
           <Text style={styles.experimentalNotice}>
-            Experimental: this searches the web for lyrics and won't always find a complete
-            result. If it doesn't work, nothing is lost, you can just paste the lyrics in
-            yourself instead.
+            Experimental: this searches the web for lyrics but may not always find a complete
+            result. If the result pasted in the next screen is incomplete or has a problem, tap
+            cancel. You can paste the correct lyrics in yourself instead.
           </Text>
 
           <Text style={styles.label}>Title</Text>

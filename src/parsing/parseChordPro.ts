@@ -2,6 +2,7 @@ import type { SectionMarker } from '../types';
 import type { ChordedWord } from './chordedWord';
 import { tokenizeChordedLine } from './chordedWord';
 import { isJunkLine } from './junkLineFilter';
+import { mergeChordOnlyLines } from './mergeChordOnlyLines';
 
 export type ParsedChordProSong = {
   title: string | null;
@@ -66,7 +67,15 @@ export function parseChordPro(rawText: string): ParsedChordProSong {
   // time — ChordPro's drop environments don't nest.
   let droppingEndNames: string[] | null = null;
 
-  for (const rawLine of rawText.split(/\r\n|\r|\n/)) {
+  // A one-time preprocessing pass: many raw chord sheets put each chord on
+  // its own line above the lyric it changes on, rather than inline — that
+  // convention strips down to nothing below and silently loses the chord
+  // entirely. This merges those chords into the following line first, so
+  // everything below sees proper inline [Chord]word syntax regardless of
+  // which convention the source actually used.
+  const mergedText = mergeChordOnlyLines(rawText);
+
+  for (const rawLine of mergedText.split(/\r\n|\r|\n/)) {
     const trimmed = rawLine.trim();
     const directiveMatch = trimmed.match(DIRECTIVE_RE);
 

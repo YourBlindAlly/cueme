@@ -23,6 +23,12 @@ type RawToken = { kind: 'chord' | 'word'; text: string; start: number; end: numb
  * ChordedWord ("wonderful") rather than left as two fragments — otherwise
  * chords-off playback speaks/displays them as two disconnected pieces with a
  * gap where the chord used to be.
+ *
+ * A DIFFERENT chord glued to the front and back of the same word (e.g.
+ * "[G]Real[C] lyric" — G under "Real", changing to C right as "Real" ends)
+ * is not the same case: the second chord doesn't belong to that word, it
+ * belongs to whatever comes next, and must not be silently dropped just
+ * because the word already has a chord from its front.
  */
 export function tokenizeChordedLine(rawLine: string): ChordedWord[] {
   const tokens: RawToken[] = [];
@@ -88,11 +94,21 @@ export function tokenizeChordedLine(rawLine: string): ChordedWord[] {
     while (j < tokens.length && tokens[j].start === cursor) {
       if (tokens[j].kind === 'word') {
         textParts.push(tokens[j].text);
+        cursor = tokens[j].end;
+        j += 1;
       } else if (!chordForWord && tokens[j].text) {
         chordForWord = tokens[j].text;
+        cursor = tokens[j].end;
+        j += 1;
+      } else {
+        // A second, different chord glued directly onto this same run (e.g.
+        // "[G]Real[C] lyric" — G under "Real", the chord changes to C right
+        // as "Real" ends). It doesn't belong to the word being assembled;
+        // stop here without consuming it, so the outer loop picks it up
+        // fresh on the next iteration and it attaches forward to whichever
+        // word comes next, instead of being silently discarded.
+        break;
       }
-      cursor = tokens[j].end;
-      j += 1;
     }
 
     words.push({ chord: chordForWord, text: textParts.join('') });

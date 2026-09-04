@@ -110,13 +110,17 @@ describe('parseChordPro', () => {
     expect(result.lines).toEqual(["Lately, I've been,  I've been losing sleep"]);
   });
 
-  it('drops a bare chord-only line from chordedLines too, one-to-one with lines', () => {
+  it('merges a chord-only line into the next line as inline chords, not dropped', () => {
+    // Updated 2026-09-04 — a chord-only line above a lyric line is now
+    // merged into it (see mergeChordOnlyLines.ts) rather than silently
+    // discarded, since that convention is common across a large share of
+    // the real library and was losing real chord data.
     const result = parseChordPro('[G] [C] [D]\nReal lyric line');
     expect(result.chordedLines).toEqual([
       [
-        { chord: null, text: 'Real' },
-        { chord: null, text: 'lyric' },
-        { chord: null, text: 'line' },
+        { chord: 'G', text: 'Real' },
+        { chord: 'C', text: 'lyric' },
+        { chord: 'D', text: 'line' },
       ],
     ]);
   });

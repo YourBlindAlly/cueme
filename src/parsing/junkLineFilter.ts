@@ -33,6 +33,13 @@ const TIP_RE = /^tip:/i;
 // anchoring to the start, catches both shapes with one check. The
 // pipe-plus-fret-number shape essentially never occurs in real sung lyrics.
 const TAB_DIAGRAM_RE = /[a-gA-G][b#]?\|[-0-9hpsb/\\~x]{3,}/;
+// A second, pipe-less tab style found live 2026-09-04 in "Higher" (Creed):
+// the string letter sits at BOTH ends with dashes/frets in between and no
+// pipe at all, e.g. "e--------------------------------e" or
+// "g----7---------------------------g". Anchored to the start of the line
+// and requires a decent run of tab characters before the closing letter, so
+// a real lyric starting with a single letter isn't caught by accident.
+const PIPELESS_TAB_DIAGRAM_RE = /^[a-gA-G][b#]?[-0-9hpsb/\\~x]{5,}[a-gA-G][b#]?\s*$/;
 
 /**
  * True if `line` is junk (a stray URL, performance note, "TIP:" aside, or
@@ -46,6 +53,7 @@ export function isJunkLine(line: string): boolean {
     URL_RE.test(trimmed) ||
     PERFORMANCE_NOTE_RE.test(trimmed) ||
     TIP_RE.test(trimmed) ||
-    TAB_DIAGRAM_RE.test(trimmed)
+    TAB_DIAGRAM_RE.test(trimmed) ||
+    PIPELESS_TAB_DIAGRAM_RE.test(trimmed)
   );
 }

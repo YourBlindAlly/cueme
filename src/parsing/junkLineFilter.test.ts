@@ -67,6 +67,14 @@ describe('isJunkLine', () => {
     );
   });
 
+  it('flags a pipe-less tab diagram line (string letter on both ends)', () => {
+    // Shaped after a real line found live 2026-09-04 in "Higher" (Creed) —
+    // a tab style with no pipe character at all.
+    expect(isJunkLine('e--------------------------------e')).toBe(true);
+    expect(isJunkLine('g----7---------------------------g')).toBe(true);
+    expect(isJunkLine('d----7---------5----------7------d')).toBe(true);
+  });
+
   it('does not flag a real lyric line', () => {
     expect(isJunkLine('And the cat sat quietly on the mat by the door')).toBe(false);
   });
