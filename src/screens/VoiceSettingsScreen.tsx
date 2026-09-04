@@ -109,7 +109,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
           <Text style={styles.actionLabel}>Reduce VoiceOver chatter while performing</Text>
           <Text style={styles.chatterHint}>
             Experimental. Tells VoiceOver an audio session is active on the lyrics screen, so it
-            interrupts CueMe's speech less — touch and buttons still work normally.
+            interrupts LyricCue's speech less — touch and buttons still work normally.
           </Text>
         </View>
         <Switch

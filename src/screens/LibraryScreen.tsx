@@ -109,7 +109,7 @@ export function LibraryScreen({ navigation }: Props) {
           hitSlop={LINK_HIT_SLOP}
           onPress={() => navigation.navigate('About')}
           accessibilityRole="button"
-          accessibilityLabel="About CueMe"
+          accessibilityLabel="About LyricCue"
         >
           <Text style={styles.aboutLink}>About</Text>
         </Pressable>
