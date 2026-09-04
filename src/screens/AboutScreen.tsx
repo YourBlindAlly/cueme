@@ -8,7 +8,7 @@ import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'About'>;
 
-const CONTACT_EMAIL = 'cueme@gmail.com';
+const CONTACT_EMAIL = 'rusty.perez@gmail.com';
 
 export function AboutScreen({ navigation }: Props) {
   // On a genuine first launch, About is the root screen — there's nothing to
