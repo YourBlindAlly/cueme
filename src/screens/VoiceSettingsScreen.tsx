@@ -162,8 +162,15 @@ export function VoiceSettingsScreen({ navigation }: Props) {
     void saveVoicePreference(null);
   };
 
-  const handlePreview = (voice: Voice) => {
-    Speech.stop();
+  // Speech.stop() is asynchronous even though it looks like a fire-and-forget
+  // call — calling speak() right after it without awaiting lets the old
+  // utterance's stop and the new one's start land out of order, which can
+  // silently drop the new one (the same bug class already fixed once in
+  // useSpeech.ts's speakNow, but never applied here — confirmed live
+  // 2026-09-05: any Preview tap after the very first one in a session could
+  // fail silently, read by Rusty as "only the top voice's Preview works").
+  const handlePreview = async (voice: Voice) => {
+    await Speech.stop();
     Speech.speak(PREVIEW_TEXT, { voice: voice.identifier, rate });
   };
 
