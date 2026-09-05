@@ -10,7 +10,7 @@ const isPreview = process.env.APP_VARIANT === 'preview';
 
 module.exports = {
   expo: {
-    name: isPreview ? 'LyricCue Preview' : 'LyricCue',
+    name: isPreview ? 'LyriCue Preview' : 'LyriCue',
     slug: 'cueme-app',
     scheme: 'cueme',
     version: '1.0.0',

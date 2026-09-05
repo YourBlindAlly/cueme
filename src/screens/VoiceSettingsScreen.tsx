@@ -182,7 +182,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
 
       <ToggleRow
         label="Reduce VoiceOver chatter while performing"
-        hint="Experimental. Tells VoiceOver an audio session is active on the lyrics screen, so it interrupts LyricCue's speech less — touch and buttons still work normally."
+        hint="Experimental. Tells VoiceOver an audio session is active on the lyrics screen, so it interrupts LyriCue's speech less — touch and buttons still work normally."
         value={reduceChatter}
         onValueChange={handleToggleReduceChatter}
       />

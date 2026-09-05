@@ -32,7 +32,7 @@ export function AboutScreen({ navigation }: Props) {
           </Pressable>
         )}
         <Text style={styles.heading} accessibilityRole="header">
-          About LyricCue
+          About LyriCue
         </Text>
       </View>
 
@@ -46,13 +46,13 @@ export function AboutScreen({ navigation }: Props) {
         />
 
         <Text style={styles.paragraph}>
-          LyricCue reads your lyrics out loud, one line at a time, while you perform live. I built
+          LyriCue reads your lyrics out loud, one line at a time, while you perform live. I built
           it for myself. I'm a blind singer-songwriter, and reading a lyric sheet on stage was
-          never an option for me. LyricCue works fine for sighted performers too.
+          never an option for me. LyriCue works fine for sighted performers too.
         </Text>
 
         <Text style={styles.paragraph}>
-          Advance to the next line with a foot pedal or a swipe down in the lyrics area. LyricCue
+          Advance to the next line with a foot pedal or a swipe down in the lyrics area. LyriCue
           has its own voice, separate from VoiceOver, so it sounds and works the same whether
           VoiceOver is on or off.
         </Text>
