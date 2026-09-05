@@ -276,6 +276,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
       />
 
       <SectionList
+        style={styles.sectionList}
         sections={sections}
         keyExtractor={(item) => item.identifier}
         ListEmptyComponent={
@@ -341,6 +342,15 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 22,
     fontWeight: '700',
+  },
+  // Without flex: 1 here, the list has no bounded height to scroll within —
+  // it just renders every row at its own natural size, so anything past
+  // the visible screen is simply unreachable rather than scrollable.
+  // Confirmed live 2026-09-05: voices sorting alphabetically after a
+  // certain point (Spanish, after the English variants) never appeared no
+  // matter how much was scrolled — this fixes that.
+  sectionList: {
+    flex: 1,
   },
   loadingText: {
     color: '#999',
