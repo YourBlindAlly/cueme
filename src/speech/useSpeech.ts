@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Speech from 'expo-speech';
 import { loadVoicePreference } from './voicePreference';
+import { DEFAULT_VOICE_RATE, loadVoiceRate, type VoiceRate } from './voiceRatePreference';
 
 export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mounted = useRef(true);
   const voiceIdRef = useRef<string | null>(null);
+  const rateRef = useRef<VoiceRate>(DEFAULT_VOICE_RATE);
   // Every speakNow() call claims the next id and checks it's still current
   // right before actually speaking — if a newer call came in while this one
   // was awaiting Speech.stop(), this one was superseded and silently backs
@@ -23,6 +25,9 @@ export function useSpeech() {
     loadVoicePreference().then((id) => {
       voiceIdRef.current = id;
     });
+    loadVoiceRate().then((rate) => {
+      rateRef.current = rate;
+    });
     return () => {
       mounted.current = false;
       Speech.stop();
@@ -30,13 +35,15 @@ export function useSpeech() {
   }, []);
 
   /**
-   * Re-reads the voice preference from storage. Needed because a screen
-   * doesn't remount when you navigate back to it (React Navigation keeps the
-   * existing instance), so a voice picked in Settings would otherwise never
-   * reach an already-mounted prompter screen's speech hook.
+   * Re-reads the voice and rate preferences from storage. Needed because a
+   * screen doesn't remount when you navigate back to it (React Navigation
+   * keeps the existing instance), so a voice or rate picked in Settings
+   * would otherwise never reach an already-mounted prompter screen's speech
+   * hook.
    */
   const refreshVoicePreference = useCallback(async () => {
     voiceIdRef.current = await loadVoicePreference();
+    rateRef.current = await loadVoiceRate();
   }, []);
 
   /**
@@ -60,6 +67,7 @@ export function useSpeech() {
       setIsSpeaking(true);
       Speech.speak(text, {
         voice: voiceIdRef.current ?? undefined,
+        rate: rateRef.current,
         // Gives AVSpeechSynthesizer its own audio session instead of sharing
         // the app-wide one that the tick/end-of-song sound effects (expo-audio)
         // also touch — fixed lines "fading" partway through, which turned out

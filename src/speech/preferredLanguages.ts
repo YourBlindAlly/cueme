@@ -30,3 +30,21 @@ export function filterVoicesByLanguages<T extends { language: string }>(
 ): T[] {
   return voices.filter((voice) => preferredCodes.includes(baseLanguageCode(voice.language)));
 }
+
+/**
+ * Filters a voice list down to Enhanced-quality voices only, unless
+ * `includeLowQuality` is true — most iOS devices have both a "Default"
+ * (compact, always present) and an "Enhanced" (higher fidelity, separately
+ * downloaded) voice per language; showing only Enhanced by default keeps
+ * the list from being dominated by lower-quality entries most people won't
+ * want, per Rusty's request 2026-09-05.
+ */
+export function filterVoicesByQuality<T extends { quality: string }>(
+  voices: T[],
+  includeLowQuality: boolean
+): T[] {
+  if (includeLowQuality) {
+    return voices;
+  }
+  return voices.filter((voice) => voice.quality === 'Enhanced');
+}

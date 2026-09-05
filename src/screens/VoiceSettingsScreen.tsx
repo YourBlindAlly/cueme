@@ -15,7 +15,23 @@ import {
   loadShowAllVoiceLanguages,
   saveShowAllVoiceLanguages,
 } from '../speech/showAllVoiceLanguagesPreference';
-import { filterVoicesByLanguages, preferredLanguageCodes } from '../speech/preferredLanguages';
+import {
+  loadShowLowQualityVoices,
+  saveShowLowQualityVoices,
+} from '../speech/showLowQualityVoicesPreference';
+import {
+  DEFAULT_VOICE_RATE,
+  loadVoiceRate,
+  nextVoiceRate,
+  saveVoiceRate,
+  voiceRateLabel,
+  type VoiceRate,
+} from '../speech/voiceRatePreference';
+import {
+  filterVoicesByLanguages,
+  filterVoicesByQuality,
+  preferredLanguageCodes,
+} from '../speech/preferredLanguages';
 import { groupVoicesByLanguage } from '../speech/groupVoicesByLanguage';
 import { LINK_HIT_SLOP } from '../ui/hitSlop';
 
@@ -23,12 +39,54 @@ type Props = NativeStackScreenProps<RootStackParamList, 'VoiceSettings'>;
 
 const PREVIEW_TEXT = 'This is what your lyrics will sound like.';
 
+/**
+ * A settings row that toggles a boolean, presented as ONE VoiceOver stop
+ * instead of three (label, hint, switch) — wrapping the whole row in a
+ * single accessible element with accessibilityRole="switch" means a swipe
+ * lands on it once and a double-tap toggles it, matching how a native iOS
+ * Settings row behaves. The visual Switch stays purely decorative
+ * (pointerEvents="none") since the outer Pressable now owns both the tap
+ * and the accessibility interaction. Fixes Rusty's report 2026-09-05 that
+ * reaching either toggle on this screen took 2-3 swipes.
+ */
+function ToggleRow({
+  label,
+  hint,
+  value,
+  onValueChange,
+}: {
+  label: string;
+  hint: string;
+  value: boolean;
+  onValueChange: (value: boolean) => void;
+}) {
+  return (
+    <Pressable
+      style={styles.chatterRow}
+      onPress={() => onValueChange(!value)}
+      accessible
+      accessibilityRole="switch"
+      accessibilityState={{ checked: value }}
+      accessibilityLabel={label}
+      accessibilityHint={hint}
+    >
+      <View style={styles.chatterTextBlock}>
+        <Text style={styles.actionLabel}>{label}</Text>
+        <Text style={styles.chatterHint}>{hint}</Text>
+      </View>
+      <Switch value={value} onValueChange={onValueChange} pointerEvents="none" />
+    </Pressable>
+  );
+}
+
 export function VoiceSettingsScreen({ navigation }: Props) {
   const onBack = () => navigation.goBack();
   const [voices, setVoices] = useState<Voice[] | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [reduceChatter, setReduceChatter] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+  const [showLowQuality, setShowLowQuality] = useState(false);
+  const [rate, setRate] = useState<VoiceRate>(DEFAULT_VOICE_RATE);
   // English always, plus whatever other language(s) the device itself is
   // set to (iOS Settings > General > Language & Region) — computed once
   // from expo-localization rather than re-derived on every render.
@@ -36,16 +94,20 @@ export function VoiceSettingsScreen({ navigation }: Props) {
 
   useEffect(() => {
     (async () => {
-      const [available, saved, chatterSetting, showAll] = await Promise.all([
+      const [available, saved, chatterSetting, showAll, showLowQ, savedRate] = await Promise.all([
         Speech.getAvailableVoicesAsync(),
         loadVoicePreference(),
         loadReduceVoiceOverChatter(),
         loadShowAllVoiceLanguages(),
+        loadShowLowQualityVoices(),
+        loadVoiceRate(),
       ]);
       setVoices(available);
       setSelectedId(saved);
       setReduceChatter(chatterSetting);
       setShowAllLanguages(showAll);
+      setShowLowQuality(showLowQ);
+      setRate(savedRate);
       setPreferredCodes(preferredLanguageCodes(Localization.getLocales()));
     })();
     return () => {
@@ -63,6 +125,19 @@ export function VoiceSettingsScreen({ navigation }: Props) {
     void saveShowAllVoiceLanguages(value);
   };
 
+  const handleToggleShowLowQuality = (value: boolean) => {
+    setShowLowQuality(value);
+    void saveShowLowQualityVoices(value);
+  };
+
+  const handleCycleRate = () => {
+    setRate((current) => {
+      const next = nextVoiceRate(current);
+      void saveVoiceRate(next);
+      return next;
+    });
+  };
+
   const handleSelect = (voice: Voice) => {
     setSelectedId(voice.identifier);
     void saveVoicePreference(voice.identifier);
@@ -75,14 +150,15 @@ export function VoiceSettingsScreen({ navigation }: Props) {
 
   const handlePreview = (voice: Voice) => {
     Speech.stop();
-    Speech.speak(PREVIEW_TEXT, { voice: voice.identifier });
+    Speech.speak(PREVIEW_TEXT, { voice: voice.identifier, rate });
   };
 
   const sections = useMemo(() => {
     const all = voices ?? [];
-    const filtered = showAllLanguages ? all : filterVoicesByLanguages(all, preferredCodes);
-    return groupVoicesByLanguage(filtered);
-  }, [voices, showAllLanguages, preferredCodes]);
+    const byLanguage = showAllLanguages ? all : filterVoicesByLanguages(all, preferredCodes);
+    const byQuality = filterVoicesByQuality(byLanguage, showLowQuality);
+    return groupVoicesByLanguage(byQuality);
+  }, [voices, showAllLanguages, showLowQuality, preferredCodes]);
 
   // Surfaced near the top so it's findable without scrolling a long,
   // language-grouped list — separate from the always-there "System
@@ -104,20 +180,23 @@ export function VoiceSettingsScreen({ navigation }: Props) {
         </Text>
       </View>
 
-      <View style={styles.chatterRow}>
-        <View style={styles.chatterTextBlock}>
-          <Text style={styles.actionLabel}>Reduce VoiceOver chatter while performing</Text>
-          <Text style={styles.chatterHint}>
-            Experimental. Tells VoiceOver an audio session is active on the lyrics screen, so it
-            interrupts LyricCue's speech less — touch and buttons still work normally.
-          </Text>
-        </View>
-        <Switch
-          value={reduceChatter}
-          onValueChange={handleToggleReduceChatter}
-          accessibilityLabel="Reduce VoiceOver chatter while performing"
-        />
-      </View>
+      <ToggleRow
+        label="Reduce VoiceOver chatter while performing"
+        hint="Experimental. Tells VoiceOver an audio session is active on the lyrics screen, so it interrupts LyricCue's speech less — touch and buttons still work normally."
+        value={reduceChatter}
+        onValueChange={handleToggleReduceChatter}
+      />
+
+      <Pressable
+        style={styles.rateRow}
+        onPress={handleCycleRate}
+        accessibilityRole="button"
+        accessibilityLabel={`Speaking speed: ${voiceRateLabel(rate)}`}
+        accessibilityHint="Tap to change."
+      >
+        <Text style={styles.actionLabel}>Speaking speed</Text>
+        <Text style={styles.rateValue}>{voiceRateLabel(rate)}</Text>
+      </Pressable>
 
       <Pressable
         style={[styles.voiceRow, selectedId === null && styles.voiceRowSelected]}
@@ -150,19 +229,19 @@ export function VoiceSettingsScreen({ navigation }: Props) {
         </View>
       ) : null}
 
-      <View style={styles.chatterRow}>
-        <View style={styles.chatterTextBlock}>
-          <Text style={styles.actionLabel}>Show all languages</Text>
-          <Text style={styles.chatterHint}>
-            Off by default — only shows English and your device's other configured language(s).
-          </Text>
-        </View>
-        <Switch
-          value={showAllLanguages}
-          onValueChange={handleToggleShowAllLanguages}
-          accessibilityLabel="Show all languages"
-        />
-      </View>
+      <ToggleRow
+        label="Show all languages"
+        hint="Off by default — only shows English and your device's other configured language(s)."
+        value={showAllLanguages}
+        onValueChange={handleToggleShowAllLanguages}
+      />
+
+      <ToggleRow
+        label="Show lower quality voices"
+        hint="Off by default — only shows the higher quality (Enhanced) voice for each language, not the standard-quality one."
+        value={showLowQuality}
+        onValueChange={handleToggleShowLowQuality}
+      />
 
       <SectionList
         sections={sections}
@@ -248,6 +327,20 @@ const styles = StyleSheet.create({
   },
   chatterTextBlock: {
     flex: 1,
+  },
+  rateRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#1c1c1c',
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 16,
+  },
+  rateValue: {
+    color: '#4f8cff',
+    fontSize: 16,
+    fontWeight: '700',
   },
   actionLabel: {
     color: '#fff',

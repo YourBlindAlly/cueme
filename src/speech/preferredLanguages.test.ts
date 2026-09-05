@@ -1,4 +1,4 @@
-import { filterVoicesByLanguages, preferredLanguageCodes } from './preferredLanguages';
+import { filterVoicesByLanguages, filterVoicesByQuality, preferredLanguageCodes } from './preferredLanguages';
 
 describe('preferredLanguageCodes', () => {
   it('always includes English even if the device reports something else first', () => {
@@ -46,5 +46,27 @@ describe('filterVoicesByLanguages', () => {
 
   it('returns an empty list when nothing matches', () => {
     expect(filterVoicesByLanguages(voices, ['de'])).toEqual([]);
+  });
+});
+
+describe('filterVoicesByQuality', () => {
+  const voices = [
+    { id: '1', quality: 'Enhanced' },
+    { id: '2', quality: 'Default' },
+    { id: '3', quality: 'Enhanced' },
+    { id: '4', quality: 'Default' },
+  ];
+
+  it('keeps only Enhanced-quality voices by default', () => {
+    expect(filterVoicesByQuality(voices, false).map((v) => v.id)).toEqual(['1', '3']);
+  });
+
+  it('keeps every voice when includeLowQuality is true', () => {
+    expect(filterVoicesByQuality(voices, true)).toEqual(voices);
+  });
+
+  it('returns an empty list when nothing is Enhanced quality', () => {
+    const allDefault = [{ id: '1', quality: 'Default' }];
+    expect(filterVoicesByQuality(allDefault, false)).toEqual([]);
   });
 });
