@@ -30,6 +30,16 @@ import {
   type VoiceRate,
 } from '../speech/voiceRatePreference';
 import {
+  DEFAULT_VOICE_VOLUME,
+  decreaseVoiceVolume,
+  increaseVoiceVolume,
+  loadVoiceVolume,
+  nextVoiceVolume,
+  saveVoiceVolume,
+  voiceVolumeLabel,
+  type VoiceVolume,
+} from '../speech/voiceVolumePreference';
+import {
   filterVoicesByLanguages,
   filterVoicesByQuality,
   preferredLanguageCodes,
@@ -89,6 +99,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
   const [showAllLanguages, setShowAllLanguages] = useState(false);
   const [showLowQuality, setShowLowQuality] = useState(false);
   const [rate, setRate] = useState<VoiceRate>(DEFAULT_VOICE_RATE);
+  const [volume, setVolume] = useState<VoiceVolume>(DEFAULT_VOICE_VOLUME);
   // English always, plus whatever other language(s) the device itself is
   // set to (iOS Settings > General > Language & Region) — computed once
   // from expo-localization rather than re-derived on every render.
@@ -96,20 +107,23 @@ export function VoiceSettingsScreen({ navigation }: Props) {
 
   useEffect(() => {
     (async () => {
-      const [available, saved, chatterSetting, showAll, showLowQ, savedRate] = await Promise.all([
-        Speech.getAvailableVoicesAsync(),
-        loadVoicePreference(),
-        loadReduceVoiceOverChatter(),
-        loadShowAllVoiceLanguages(),
-        loadShowLowQualityVoices(),
-        loadVoiceRate(),
-      ]);
+      const [available, saved, chatterSetting, showAll, showLowQ, savedRate, savedVolume] =
+        await Promise.all([
+          Speech.getAvailableVoicesAsync(),
+          loadVoicePreference(),
+          loadReduceVoiceOverChatter(),
+          loadShowAllVoiceLanguages(),
+          loadShowLowQualityVoices(),
+          loadVoiceRate(),
+          loadVoiceVolume(),
+        ]);
       setVoices(available);
       setSelectedId(saved);
       setReduceChatter(chatterSetting);
       setShowAllLanguages(showAll);
       setShowLowQuality(showLowQ);
       setRate(savedRate);
+      setVolume(savedVolume);
       setPreferredCodes(preferredLanguageCodes(Localization.getLocales()));
     })();
     return () => {
@@ -152,6 +166,23 @@ export function VoiceSettingsScreen({ navigation }: Props) {
     });
   };
 
+  const handleCycleVolume = () => {
+    setVolume((current) => {
+      const next = nextVoiceVolume(current);
+      void saveVoiceVolume(next);
+      return next;
+    });
+  };
+
+  const handleAdjustVolume = (direction: 'increment' | 'decrement') => {
+    setVolume((current) => {
+      const next =
+        direction === 'increment' ? increaseVoiceVolume(current) : decreaseVoiceVolume(current);
+      void saveVoiceVolume(next);
+      return next;
+    });
+  };
+
   const handleSelect = (voice: Voice) => {
     setSelectedId(voice.identifier);
     void saveVoicePreference(voice.identifier);
@@ -171,7 +202,7 @@ export function VoiceSettingsScreen({ navigation }: Props) {
   // fail silently, read by Rusty as "only the top voice's Preview works").
   const handlePreview = async (voice: Voice) => {
     await Speech.stop();
-    Speech.speak(PREVIEW_TEXT, { voice: voice.identifier, rate });
+    Speech.speak(PREVIEW_TEXT, { voice: voice.identifier, rate, volume });
   };
 
   const sections = useMemo(() => {
@@ -228,6 +259,28 @@ export function VoiceSettingsScreen({ navigation }: Props) {
       >
         <Text style={styles.actionLabel}>Speaking speed</Text>
         <Text style={styles.rateValue}>{voiceRateLabel(rate)}</Text>
+      </Pressable>
+
+      <Pressable
+        style={styles.rateRow}
+        onPress={handleCycleVolume}
+        accessibilityRole="adjustable"
+        accessibilityLabel={`Speaking volume: ${voiceVolumeLabel(volume)}`}
+        accessibilityHint="Swipe up for louder, down for quieter. Double tap to cycle."
+        accessibilityActions={[
+          { name: 'increment', label: 'Louder' },
+          { name: 'decrement', label: 'Quieter' },
+        ]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'increment') {
+            handleAdjustVolume('increment');
+          } else if (event.nativeEvent.actionName === 'decrement') {
+            handleAdjustVolume('decrement');
+          }
+        }}
+      >
+        <Text style={styles.actionLabel}>Speaking volume</Text>
+        <Text style={styles.rateValue}>{voiceVolumeLabel(volume)}</Text>
       </Pressable>
 
       <Pressable

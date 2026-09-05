@@ -2,12 +2,14 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import * as Speech from 'expo-speech';
 import { loadVoicePreference } from './voicePreference';
 import { DEFAULT_VOICE_RATE, loadVoiceRate, type VoiceRate } from './voiceRatePreference';
+import { DEFAULT_VOICE_VOLUME, loadVoiceVolume, type VoiceVolume } from './voiceVolumePreference';
 
 export function useSpeech() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const mounted = useRef(true);
   const voiceIdRef = useRef<string | null>(null);
   const rateRef = useRef<VoiceRate>(DEFAULT_VOICE_RATE);
+  const volumeRef = useRef<VoiceVolume>(DEFAULT_VOICE_VOLUME);
   // Every speakNow() call claims the next id and checks it's still current
   // right before actually speaking — if a newer call came in while this one
   // was awaiting Speech.stop(), this one was superseded and silently backs
@@ -28,6 +30,9 @@ export function useSpeech() {
     loadVoiceRate().then((rate) => {
       rateRef.current = rate;
     });
+    loadVoiceVolume().then((volume) => {
+      volumeRef.current = volume;
+    });
     return () => {
       mounted.current = false;
       Speech.stop();
@@ -44,6 +49,7 @@ export function useSpeech() {
   const refreshVoicePreference = useCallback(async () => {
     voiceIdRef.current = await loadVoicePreference();
     rateRef.current = await loadVoiceRate();
+    volumeRef.current = await loadVoiceVolume();
   }, []);
 
   /**
@@ -68,6 +74,7 @@ export function useSpeech() {
       Speech.speak(text, {
         voice: voiceIdRef.current ?? undefined,
         rate: rateRef.current,
+        volume: volumeRef.current,
         // Gives AVSpeechSynthesizer its own audio session instead of sharing
         // the app-wide one that the tick/end-of-song sound effects (expo-audio)
         // also touch — fixed lines "fading" partway through, which turned out
