@@ -21,6 +21,8 @@ import {
 } from '../speech/showLowQualityVoicesPreference';
 import {
   DEFAULT_VOICE_RATE,
+  decreaseVoiceRate,
+  increaseVoiceRate,
   loadVoiceRate,
   nextVoiceRate,
   saveVoiceRate,
@@ -138,6 +140,18 @@ export function VoiceSettingsScreen({ navigation }: Props) {
     });
   };
 
+  // Swipe up/down while focused (VoiceOver's native "adjustable" gesture,
+  // same mechanism as the lyric line and song-jump header elsewhere in the
+  // app) — a direct, bidirectional alternative to tapping the button all
+  // the way around, per Rusty's request 2026-09-05.
+  const handleAdjustRate = (direction: 'increment' | 'decrement') => {
+    setRate((current) => {
+      const next = direction === 'increment' ? increaseVoiceRate(current) : decreaseVoiceRate(current);
+      void saveVoiceRate(next);
+      return next;
+    });
+  };
+
   const handleSelect = (voice: Voice) => {
     setSelectedId(voice.identifier);
     void saveVoicePreference(voice.identifier);
@@ -190,9 +204,20 @@ export function VoiceSettingsScreen({ navigation }: Props) {
       <Pressable
         style={styles.rateRow}
         onPress={handleCycleRate}
-        accessibilityRole="button"
+        accessibilityRole="adjustable"
         accessibilityLabel={`Speaking speed: ${voiceRateLabel(rate)}`}
-        accessibilityHint="Tap to change."
+        accessibilityHint="Swipe up for faster, down for slower. Double tap to cycle."
+        accessibilityActions={[
+          { name: 'increment', label: 'Faster' },
+          { name: 'decrement', label: 'Slower' },
+        ]}
+        onAccessibilityAction={(event) => {
+          if (event.nativeEvent.actionName === 'increment') {
+            handleAdjustRate('increment');
+          } else if (event.nativeEvent.actionName === 'decrement') {
+            handleAdjustRate('decrement');
+          }
+        }}
       >
         <Text style={styles.actionLabel}>Speaking speed</Text>
         <Text style={styles.rateValue}>{voiceRateLabel(rate)}</Text>

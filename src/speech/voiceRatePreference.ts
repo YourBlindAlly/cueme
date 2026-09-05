@@ -29,6 +29,25 @@ export function nextVoiceRate(current: VoiceRate): VoiceRate {
   return RATE_PRESETS[(index + 1) % RATE_PRESETS.length];
 }
 
+/**
+ * One step faster/slower, clamped at the ends of the preset list rather than
+ * wrapping — for the swipe-up/swipe-down "adjustable" gesture (Rusty's
+ * request 2026-09-05: tapping the button all the way around to go back down
+ * a step was a pain). Wrapping makes sense for a single forward-only tap
+ * button; it doesn't for a control you can already move in either direction
+ * directly, so going past either end just stays there instead of jumping to
+ * the opposite end.
+ */
+export function increaseVoiceRate(current: VoiceRate): VoiceRate {
+  const index = RATE_PRESETS.indexOf(current);
+  return RATE_PRESETS[Math.min(index + 1, RATE_PRESETS.length - 1)];
+}
+
+export function decreaseVoiceRate(current: VoiceRate): VoiceRate {
+  const index = RATE_PRESETS.indexOf(current);
+  return RATE_PRESETS[Math.max(index - 1, 0)];
+}
+
 export function voiceRateLabel(rate: VoiceRate): string {
   return rate === 1.0 ? 'Normal' : `${rate}x`;
 }
