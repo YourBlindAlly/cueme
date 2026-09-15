@@ -1,16 +1,6 @@
 import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Alert,
-  FlatList,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
@@ -90,11 +80,14 @@ export function SearchScreen({ navigation }: Props) {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      onAccessibilityEscape={() => navigation.goBack()}
-    >
+    // SafeAreaView, not KeyboardAvoidingView, as the root — matches every
+    // other screen's onAccessibilityEscape pattern (Setlists, Import
+    // Setlist, Setlist Creator, Prompt). Confirmed live 2026-09-15 that
+    // KeyboardAvoidingView does not reliably forward the two-finger "Z"
+    // scrub gesture the same way; Setlist Creator has its own TextInput
+    // with no KeyboardAvoidingView at all and works fine, so this isn't
+    // actually needed for the keyboard-avoidance behavior either.
+    <SafeAreaView style={styles.container} edges={['top']} onAccessibilityEscape={() => navigation.goBack()}>
       <View style={styles.headerRow}>
         <Pressable
           hitSlop={LINK_HIT_SLOP}
@@ -162,7 +155,7 @@ export function SearchScreen({ navigation }: Props) {
           )}
         </>
       )}
-    </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 

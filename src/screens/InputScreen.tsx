@@ -1,13 +1,6 @@
 import React, { useState } from 'react';
-import {
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  StyleSheet,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation/types';
 import { useAppState } from '../state/AppStateContext';
@@ -55,65 +48,70 @@ export function InputScreen({ navigation, route }: Props) {
     // whichever screen actually opened this one (Library for a new song,
     // Prompt for editing an existing one), since handleCancel's plain
     // goBack() already handles both correctly. Same VoiceOver
-    // two-finger-scrub support as PromptScreen.
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      onAccessibilityEscape={handleCancel}
-    >
-      <View style={styles.headerRow}>
-        <Text style={styles.heading} accessibilityRole="header">
-          {editSong ? strings.inputScreen.editHeading : strings.inputScreen.addHeading}
+    // two-finger-scrub support as PromptScreen. SafeAreaView (not
+    // KeyboardAvoidingView) has to be the element actually carrying
+    // onAccessibilityEscape — confirmed live 2026-09-15 that
+    // KeyboardAvoidingView doesn't reliably forward the two-finger "Z"
+    // scrub gesture the same way every other screen's root does.
+    // KeyboardAvoidingView is kept nested inside, purely for its real
+    // padding behavior (this screen's multiline lyrics box genuinely needs
+    // it, unlike Search's single-line query field).
+    <SafeAreaView style={styles.container} edges={['top']} onAccessibilityEscape={handleCancel}>
+      <KeyboardAvoidingView style={styles.flexOne} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={styles.headerRow}>
+          <Text style={styles.heading} accessibilityRole="header">
+            {editSong ? strings.inputScreen.editHeading : strings.inputScreen.addHeading}
+          </Text>
+          <Pressable
+            hitSlop={LINK_HIT_SLOP}
+            onPress={handleCancel}
+            accessibilityRole="button"
+            accessibilityLabel={strings.inputScreen.cancelLabel}
+          >
+            <Text style={styles.cancelLink}>{strings.inputScreen.cancelLabel}</Text>
+          </Pressable>
+        </View>
+
+        <Text style={styles.label} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {strings.inputScreen.titleLabel}
         </Text>
+        <TextInput
+          style={styles.titleInput}
+          value={title}
+          onChangeText={setTitle}
+          placeholder={strings.inputScreen.titlePlaceholder}
+          accessibilityLabel={strings.inputScreen.titleLabel}
+          returnKeyType="next"
+        />
+
+        <Text style={styles.label} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+          {strings.inputScreen.lyricsLabel}
+        </Text>
+        <TextInput
+          style={styles.bodyInput}
+          value={rawText}
+          onChangeText={setRawText}
+          placeholder={strings.inputScreen.lyricsPlaceholder}
+          placeholderTextColor="#8a8a8a"
+          multiline
+          textAlignVertical="top"
+          accessibilityLabel={strings.inputScreen.lyricsLabel}
+        />
+
         <Pressable
-          hitSlop={LINK_HIT_SLOP}
-          onPress={handleCancel}
+          style={[styles.loadButton, !canLoad && styles.loadButtonDisabled]}
+          onPress={handleLoad}
+          disabled={!canLoad}
           accessibilityRole="button"
-          accessibilityLabel={strings.inputScreen.cancelLabel}
+          accessibilityLabel={editSong ? strings.inputScreen.saveChangesLabel : strings.inputScreen.loadSongLabel}
+          accessibilityState={{ disabled: !canLoad }}
         >
-          <Text style={styles.cancelLink}>{strings.inputScreen.cancelLabel}</Text>
+          <Text style={styles.loadButtonText}>
+            {editSong ? strings.inputScreen.saveChangesLabel : strings.inputScreen.loadSongLabel}
+          </Text>
         </Pressable>
-      </View>
-
-      <Text style={styles.label} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {strings.inputScreen.titleLabel}
-      </Text>
-      <TextInput
-        style={styles.titleInput}
-        value={title}
-        onChangeText={setTitle}
-        placeholder={strings.inputScreen.titlePlaceholder}
-        accessibilityLabel={strings.inputScreen.titleLabel}
-        returnKeyType="next"
-      />
-
-      <Text style={styles.label} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-        {strings.inputScreen.lyricsLabel}
-      </Text>
-      <TextInput
-        style={styles.bodyInput}
-        value={rawText}
-        onChangeText={setRawText}
-        placeholder={strings.inputScreen.lyricsPlaceholder}
-        placeholderTextColor="#8a8a8a"
-        multiline
-        textAlignVertical="top"
-        accessibilityLabel={strings.inputScreen.lyricsLabel}
-      />
-
-      <Pressable
-        style={[styles.loadButton, !canLoad && styles.loadButtonDisabled]}
-        onPress={handleLoad}
-        disabled={!canLoad}
-        accessibilityRole="button"
-        accessibilityLabel={editSong ? strings.inputScreen.saveChangesLabel : strings.inputScreen.loadSongLabel}
-        accessibilityState={{ disabled: !canLoad }}
-      >
-        <Text style={styles.loadButtonText}>
-          {editSong ? strings.inputScreen.saveChangesLabel : strings.inputScreen.loadSongLabel}
-        </Text>
-      </Pressable>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
 
@@ -122,6 +120,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000',
     padding: 20,
+  },
+  flexOne: {
+    flex: 1,
   },
   headerRow: {
     flexDirection: 'row',
