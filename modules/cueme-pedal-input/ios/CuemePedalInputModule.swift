@@ -55,8 +55,21 @@ public class CuemePedalInputModule: Module {
         queue: .main
       ) { [weak self] _ in
         guard let self else { return }
-        let body: [String: Any?] = [:]
-        self.sendEvent("onPedalDisconnected", body)
+        // Debounced, not immediate — a real pedal disconnect (power off,
+        // walking out of range) stays disconnected well past this delay, so
+        // this adds no perceptible lag there. But a momentary Bluetooth
+        // signal blip can fire this same notification without the pedal
+        // actually going away, reported 2026-09-15 as the UI briefly
+        // showing "disconnected" while presses kept working fine the whole
+        // time — re-checking GCKeyboard.coalesced after a short delay
+        // filters that case out instead of trusting the notification alone.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
+          guard let self else { return }
+          if GCKeyboard.coalesced == nil {
+            let body: [String: Any?] = [:]
+            self.sendEvent("onPedalDisconnected", body)
+          }
+        }
       }
 
       self.interruptionObserver = NotificationCenter.default.addObserver(
@@ -110,6 +123,25 @@ public class CuemePedalInputModule: Module {
       let keyboard = GCKeyboard.coalesced
       self.attachKeyHandler(to: keyboard?.keyboardInput)
       return keyboard != nil
+    }
+
+    // Found 2026-09-15: the real key-delivery path (PedalKeyCaptureView's
+    // pressesBegan/pressesEnded, see its own doc comment) only ever claims
+    // first-responder status once, when the app launches. Any text field
+    // anywhere in the app taking focus for typing — Search, the paste-a-
+    // song box, a setlist name field — silently steals that status away and
+    // nothing gives it back on its own. The pedal's actual Bluetooth
+    // connection never drops when this happens, so isPedalConnected()/the
+    // connect-disconnect notifications above stay oblivious: the UI keeps
+    // saying "Connected" while presses silently stop reaching the app,
+    // until the pedal is physically power-cycled and its real Bluetooth
+    // disconnect finally fires — which looks like it explains the problem
+    // but doesn't, it's just the first real event that happens to follow
+    // it. Call this from JS whenever the app returns to a place pedal
+    // input actually matters (the Prompt screen gaining focus, the app
+    // returning to the foreground) to reclaim it.
+    Function("reclaimPedalFocus") { () in
+      PedalKeyCaptureView.current?.reclaimFirstResponder()
     }
   }
 

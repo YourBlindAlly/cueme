@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { AppState, Pressable, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Directions, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { useKeepAwake } from 'expo-keep-awake';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useIsFocused } from '@react-navigation/native';
 import type { RootStackParamList } from '../navigation/types';
+import CuemePedalInput from '../../modules/cueme-pedal-input/src/CuemePedalInputModule';
 import { useAppState } from '../state/AppStateContext';
 import { useSpeech } from '../speech/useSpeech';
 import { useAudioInterruptionResume } from '../speech/useAudioInterruptionResume';
@@ -144,9 +145,31 @@ export function PromptScreen({ navigation }: Props) {
       loadHigherPitchForChords().then(setHigherPitchForChords);
       loadRepeatFeatureEnabled().then(setRepeatFeatureEnabled);
       loadLanguageDetectionEngine().then(setLanguageDetectionEngine);
+      // Any text field used anywhere else in the app (Search, paste a song,
+      // a setlist name) silently steals hardware-key-press delivery away
+      // from the pedal forever, with nothing to give it back on its own —
+      // see reclaimPedalFocus's doc comment in CuemePedalInputModule.swift.
+      // Reclaiming every time this, the screen pedal input actually
+      // matters on, regains focus is the cheapest reliable place to recover
+      // it, whether or not that actually happened this time.
+      CuemePedalInput.reclaimPedalFocus();
     });
     return unsubscribe;
   }, [navigation, refreshVoicePreference]);
+
+  // Same reclaim, for the other real way focus gets silently stolen: the
+  // app backgrounding (phone lock, switching to another app to check
+  // something, an incoming call) and coming back — doesn't necessarily
+  // fire this screen's own 'focus' event above since navigation state
+  // itself didn't change.
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        CuemePedalInput.reclaimPedalFocus();
+      }
+    });
+    return () => subscription.remove();
+  }, []);
 
   useEffect(() => {
     if (!song) {

@@ -8,6 +8,9 @@ class CuemePedalInputModule extends NativeModule<CuemePedalInputEvents> {
   isPedalConnected(): boolean {
     return false;
   }
+  reclaimPedalFocus(): void {
+    // no-op — nothing to reclaim without a native capture view
+  }
 }
 
 export default registerWebModule(CuemePedalInputModule, 'CuemePedalInputModule');

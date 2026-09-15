@@ -14,16 +14,33 @@ import UIKit
 /// process — while that same pedal's Enter key reached a plain iOS text
 /// field, proving this lower-level path genuinely receives its input.
 class PedalKeyCaptureView: ExpoView {
+  /// Weak reference so CuemePedalInputModule's reclaimFocus() can reach this
+  /// view without walking the view hierarchy — same pattern as
+  /// CuemePedalInputModule.current in the module itself.
+  static weak var current: PedalKeyCaptureView?
+
   override var canBecomeFirstResponder: Bool { true }
 
   required init(appContext: AppContext? = nil) {
     super.init(appContext: appContext)
     isUserInteractionEnabled = false
+    PedalKeyCaptureView.current = self
   }
 
   override func didMoveToWindow() {
     super.didMoveToWindow()
     if window != nil {
+      becomeFirstResponder()
+    }
+  }
+
+  /// Called from CuemePedalInputModule.reclaimFocus() — see that function's
+  /// doc comment for why this is needed at all: this view only ever claims
+  /// first-responder status once, in didMoveToWindow above, and ANY text
+  /// field anywhere in the app taking focus for typing silently steals it
+  /// away forever after, with nothing to give it back on its own.
+  func reclaimFirstResponder() {
+    if !isFirstResponder {
       becomeFirstResponder()
     }
   }
