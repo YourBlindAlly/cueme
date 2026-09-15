@@ -18,6 +18,15 @@ describe('parseChordPro', () => {
     expect(result.key).toBe('C');
   });
 
+  it('keeps the FIRST {t:} line as the title when a second {t:} line holds the artist instead', () => {
+    // Real file pattern (Space Oddity - David Bowie.pro): some chord sheets
+    // in the wild use a second {t:} line for the artist rather than
+    // {artist:}/{subtitle:} — reported 2026-09-15 as the song's real title
+    // silently vanishing from the library list because it got overwritten.
+    const result = parseChordPro('{t: Space Oddity}\n{t: David Bowie}\n{artist: David Bowie}\n[C]Ground control');
+    expect(result.title).toBe('Space Oddity');
+  });
+
   it('strips inline chord brackets, keeping the lyric text', () => {
     const result = parseChordPro('[G]Amazing [C]grace, how [G]sweet the sound');
     expect(result.lines).toEqual(['Amazing grace, how sweet the sound']);

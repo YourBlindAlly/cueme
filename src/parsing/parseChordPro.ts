@@ -101,7 +101,20 @@ export function parseChordPro(rawText: string): ParsedChordProSong {
       const arg = directiveMatch[2]?.trim() ?? '';
 
       if (TITLE_NAMES.includes(name)) {
-        title = arg || title;
+        // Only the FIRST {t:}/{title:} line wins, deliberately — some real
+        // files in the wild (e.g. "Space Oddity - David Bowie.pro") carry a
+        // SECOND {t:} line holding the artist name instead of using
+        // {artist:}/{subtitle:} for it, a convention the Python curation
+        // scripts already know to handle (build_song_index.py takes
+        // titles[0] as title, titles[1] as artist) but this parser didn't
+        // — it kept overwriting, so the song's real title got silently
+        // replaced by the artist name and vanished from the library list
+        // (reported by Rusty 2026-09-15). Taking only the first line fixes
+        // this without needing to parse a second value out of it, since the
+        // app already gets the artist from the Dropbox filename instead.
+        if (title === null) {
+          title = arg || null;
+        }
         continue;
       }
       if (KEY_NAMES.includes(name)) {
