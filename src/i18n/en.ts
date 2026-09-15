@@ -89,6 +89,7 @@ export const en = {
       "Search isn't set up yet. It needs a backend server, which hasn't been connected to this build of the app.",
     queryLabel: 'Song title or artist',
     queryPlaceholder: 'Song title or artist',
+    cancelEditingLabel: 'Cancel',
     searchingLabel: 'Searching…',
     searchLabel: 'Search',
     noResultsText: 'No matches found.',

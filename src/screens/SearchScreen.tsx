@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -25,9 +25,21 @@ export function SearchScreen({ navigation }: Props) {
   const [results, setResults] = useState<SearchResult[] | null>(null);
   const [isSearching, setIsSearching] = useState(false);
   const [loadingPath, setLoadingPath] = useState<string | null>(null);
+  const [isEditingQuery, setIsEditingQuery] = useState(false);
+  const inputRef = useRef<TextInput>(null);
 
   const configured = isSearchConfigured();
   const canSearch = configured && !isSearching && query.trim().length > 0;
+
+  // Blurs the field and dismisses the keyboard without submitting or
+  // navigating away — raised by Rusty 2026-09-15: typing something in, then
+  // changing your mind, had no way to just stop editing and stay on this
+  // screen (Return submits, the two-finger scrub leaves the screen
+  // entirely). Same "Cancel next to the search box" pattern iOS's own
+  // Settings/Messages search bars use, not something invented here.
+  const handleCancelEditing = () => {
+    inputRef.current?.blur();
+  };
 
   const handleSearch = async () => {
     setIsSearching(true);
@@ -106,16 +118,32 @@ export function SearchScreen({ navigation }: Props) {
         <Text style={styles.notConfiguredText}>{strings.search.notConfiguredText}</Text>
       ) : (
         <>
-          <TextInput
-            style={styles.input}
-            value={query}
-            onChangeText={setQuery}
-            placeholder={strings.search.queryPlaceholder}
-            accessibilityLabel={strings.search.queryLabel}
-            returnKeyType="search"
-            onSubmitEditing={handleSearch}
-            editable={!isSearching}
-          />
+          <View style={styles.queryRow}>
+            <TextInput
+              ref={inputRef}
+              style={styles.input}
+              value={query}
+              onChangeText={setQuery}
+              placeholder={strings.search.queryPlaceholder}
+              accessibilityLabel={strings.search.queryLabel}
+              returnKeyType="search"
+              onSubmitEditing={handleSearch}
+              onFocus={() => setIsEditingQuery(true)}
+              onBlur={() => setIsEditingQuery(false)}
+              editable={!isSearching}
+              clearButtonMode="while-editing"
+            />
+            {isEditingQuery && (
+              <Pressable
+                hitSlop={LINK_HIT_SLOP}
+                onPress={handleCancelEditing}
+                accessibilityRole="button"
+                accessibilityLabel={strings.search.cancelEditingLabel}
+              >
+                <Text style={styles.cancelEditingLink}>{strings.search.cancelEditingLabel}</Text>
+              </Pressable>
+            )}
+          </View>
 
           <Pressable
             style={[styles.searchButton, !canSearch && styles.searchButtonDisabled]}
@@ -180,11 +208,21 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '700',
   },
+  queryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
   input: {
+    flex: 1,
     backgroundColor: '#1c1c1c',
     color: '#fff',
     borderRadius: 8,
     padding: 12,
+    fontSize: 16,
+  },
+  cancelEditingLink: {
+    color: '#4f8cff',
     fontSize: 16,
   },
   searchButton: {

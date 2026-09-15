@@ -91,6 +91,7 @@ export const uk: Strings = {
       'Пошук ще не налаштовано. Для цього потрібен серверний бекенд, який ще не підключено до цієї збірки додатка.',
     queryLabel: 'Назва пісні або виконавець',
     queryPlaceholder: 'Назва пісні або виконавець',
+    cancelEditingLabel: 'Скасувати',
     searchingLabel: 'Пошук…',
     searchLabel: 'Пошук',
     noResultsText: 'Нічого не знайдено.',
