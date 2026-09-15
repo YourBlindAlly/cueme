@@ -141,7 +141,21 @@ public class CuemePedalInputModule: Module {
     // input actually matters (the Prompt screen gaining focus, the app
     // returning to the foreground) to reclaim it.
     Function("reclaimPedalFocus") { () in
-      PedalKeyCaptureView.current?.reclaimFirstResponder()
+      // Deliberately NOT called synchronously — this fires from JS the
+      // instant the Prompt screen gains navigation focus, which is exactly
+      // when a text field elsewhere (a search box, a setlist name field)
+      // may still be in the middle of resigning first-responder status as
+      // part of the same screen transition. Calling becomeFirstResponder()
+      // on our capture view while UIKit's responder chain is still
+      // mid-transition from that resignation is a known real crash
+      // pattern — dispatching to the next run loop turn lets that
+      // resignation actually finish first. Suspected real cause of a crash
+      // Rusty reported 2026-09-15, reliably reproducible loading ANY song
+      // (confirmed not content-specific) right after using a search/filter
+      // text box — not yet confirmed fixed on real hardware.
+      DispatchQueue.main.async {
+        PedalKeyCaptureView.current?.reclaimFirstResponder()
+      }
     }
   }
 
