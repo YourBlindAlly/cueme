@@ -90,6 +90,7 @@ export function LibraryScreen({ navigation }: Props) {
     manual: strings.library.sourceLabelPasted,
     file: strings.library.sourceLabelImportedFile,
     dropbox: strings.library.sourceLabelDropbox,
+    search: strings.library.sourceLabelSearch,
     demo: strings.library.sourceLabelDemoSong,
   };
   const { library, isLibraryLoaded, loadSong, removeFromLibrary, reduceHints } = useAppState();
@@ -245,11 +246,11 @@ export function LibraryScreen({ navigation }: Props) {
         </Pressable>
         <Pressable
           style={styles.actionButton}
-          onPress={() => navigation.navigate('FindSong')}
+          onPress={() => navigation.navigate('Search')}
           accessibilityRole="button"
-          accessibilityLabel={strings.library.findSongButtonLabel}
+          accessibilityLabel={strings.library.searchButtonLabel}
         >
-          <Text style={styles.actionButtonText}>{strings.library.findSongButtonLabel}</Text>
+          <Text style={styles.actionButtonText}>{strings.library.searchButtonLabel}</Text>
         </Pressable>
         <Pressable
           style={styles.actionButton}

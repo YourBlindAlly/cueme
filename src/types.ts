@@ -11,6 +11,7 @@ export type SongSource =
   | { type: 'manual' }
   | { type: 'file' }
   | { type: 'dropbox'; path: string }
+  | { type: 'search'; path: string }
   | { type: 'demo' };
 
 export type Song = {

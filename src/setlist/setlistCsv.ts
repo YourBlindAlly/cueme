@@ -79,3 +79,8 @@ export function sanitizeSetlistFilename(name: string): string {
   const cleaned = name.trim().replace(/[/\\:*?"<>|]/g, '').trim();
   return `${cleaned || 'Untitled Setlist'}.csv`;
 }
+
+/** Reverses sanitizeSetlistFilename for import: a Dropbox CSV's own filename becomes the setlist's name. */
+export function setlistNameFromFilename(filename: string): string {
+  return filename.replace(/\.csv$/i, '');
+}

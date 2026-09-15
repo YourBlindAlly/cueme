@@ -8,16 +8,23 @@ enabled = true
 # Everything below is set as a Worker secret (Dashboard > Workers & Pages >
 # cueme-song-search > Settings > Variables and Secrets), never committed
 # here — see SETUP.txt for the exact steps and names:
-#   APP_SHARED_SECRET   shared secret the app must send back, stops a
-#                       stranger who finds the URL from running up the bill
-#   AI_PROVIDER         "gemini" | "anthropic" | "openai" (defaults to gemini)
-#   AI_MODEL            optional — overrides the default model for whichever
-#                       AI_PROVIDER is selected
-#   GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
-#                       only the one matching AI_PROVIDER is required
+#   APP_SHARED_SECRET             shared secret the app must send back,
+#                                 stops a stranger who finds the URL from
+#                                 running up the community Dropbox account's
+#                                 API usage
+#   COMMUNITY_DROPBOX_REFRESH_TOKEN
+#                                 long-lived Dropbox refresh token for the
+#                                 shared community library account
+#                                 (rusty@yourblindally.com, separate from
+#                                 Rusty's own personal Dropbox) — obtained
+#                                 via docs/reveal-token.html, see
+#                                 "chordpro songs/project notes.txt" Step 10
+#                                 in the LyriCue - audio prompter folder for
+#                                 the full story
 #
-# No separate search API key needed — each provider does its own real web
-# search and reads real pages as part of one call (Gemini's "Grounding with
-# Google Search", Anthropic's web_search tool, OpenAI's web_search tool),
-# rather than CueMe gluing together a separate search API and a plain
-# text-only model call. Dropped Brave Search here 2026-09-02.
+# 2026-09-15: replaced the earlier AI-web-search version of this Worker
+# (Gemini/Anthropic/OpenAI grounding search) with a search over the curated
+# community song library instead — the AI version's real-world success rate
+# was low even after real tuning work, and a real curated library search is
+# both more reliable and (per Rusty's explicit request) not something the
+# app advertises as "Dropbox" anywhere in its UI, just "Search".

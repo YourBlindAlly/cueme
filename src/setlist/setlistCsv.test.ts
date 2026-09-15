@@ -1,4 +1,9 @@
-import { parseSetlistCsv, sanitizeSetlistFilename, serializeSetlistCsv } from './setlistCsv';
+import {
+  parseSetlistCsv,
+  sanitizeSetlistFilename,
+  serializeSetlistCsv,
+  setlistNameFromFilename,
+} from './setlistCsv';
 
 describe('serializeSetlistCsv / parseSetlistCsv round trip', () => {
   it('round-trips a simple list of entries', () => {
@@ -41,5 +46,19 @@ describe('sanitizeSetlistFilename', () => {
   it('falls back to a default name when the input is empty after cleaning', () => {
     expect(sanitizeSetlistFilename('   ')).toBe('Untitled Setlist.csv');
     expect(sanitizeSetlistFilename('///')).toBe('Untitled Setlist.csv');
+  });
+});
+
+describe('setlistNameFromFilename', () => {
+  it('strips a .csv extension', () => {
+    expect(setlistNameFromFilename('Friday Night Set.csv')).toBe('Friday Night Set');
+  });
+
+  it('is case-insensitive about the extension', () => {
+    expect(setlistNameFromFilename('Friday Night Set.CSV')).toBe('Friday Night Set');
+  });
+
+  it('round-trips through sanitizeSetlistFilename for a plain name', () => {
+    expect(setlistNameFromFilename(sanitizeSetlistFilename('Gig Set'))).toBe('Gig Set');
   });
 });

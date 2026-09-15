@@ -15,7 +15,8 @@ import { LanguageVoicesScreen } from './src/screens/LanguageVoicesScreen';
 import { DropboxBrowseScreen } from './src/screens/DropboxBrowseScreen';
 import { SetlistsScreen } from './src/screens/SetlistsScreen';
 import { SetlistCreatorScreen } from './src/screens/SetlistCreatorScreen';
-import { FindSongScreen } from './src/screens/FindSongScreen';
+import { ImportSetlistScreen } from './src/screens/ImportSetlistScreen';
+import { SearchScreen } from './src/screens/SearchScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { AppStateProvider } from './src/state/AppStateContext';
 import { CuemePedalCaptureView } from './modules/cueme-pedal-input/src/CuemePedalCaptureView';
@@ -121,7 +122,8 @@ export default function App() {
               <Stack.Screen name="DropboxBrowse" component={DropboxBrowseScreen} />
               <Stack.Screen name="Setlists" component={SetlistsScreen} />
               <Stack.Screen name="SetlistCreator" component={SetlistCreatorScreen} />
-              <Stack.Screen name="FindSong" component={FindSongScreen} />
+              <Stack.Screen name="ImportSetlist" component={ImportSetlistScreen} />
+              <Stack.Screen name="Search" component={SearchScreen} />
               <Stack.Screen name="About" component={AboutScreen} />
             </Stack.Navigator>
           </NavigationContainer>

@@ -1,5 +1,17 @@
-import { deleteDropboxFile, uploadDropboxFile } from '../cloud/dropbox/dropboxApi';
-import { sanitizeSetlistFilename, serializeSetlistCsv, type Setlist } from './setlistCsv';
+import {
+  deleteDropboxFile,
+  downloadDropboxFile,
+  listDropboxFolder,
+  uploadDropboxFile,
+  type DropboxEntry,
+} from '../cloud/dropbox/dropboxApi';
+import {
+  parseSetlistCsv,
+  sanitizeSetlistFilename,
+  serializeSetlistCsv,
+  setlistNameFromFilename,
+  type Setlist,
+} from './setlistCsv';
 import {
   loadLocalSetlists,
   makeSetlistId,
@@ -73,4 +85,35 @@ export async function saveSetlist(setlist: Setlist): Promise<void> {
 export async function deleteSetlist(summary: SetlistSummary): Promise<void> {
   await removeLocalSetlist(summary.id);
   void removeDropboxBackup(summary.name);
+}
+
+/**
+ * Lists the .csv setlist files sitting in Dropbox's /setlists folder — this
+ * includes both this app's own backups (see backupToDropbox above) and any
+ * setlist CSV a DIFFERENT tool wrote directly into that same folder in the
+ * same Title,Path format (e.g. a web-based setlist builder), since nothing
+ * here distinguishes the two. Never used for normal playback (that's local
+ * storage only, see the module doc comment above) — this is purely the
+ * source list for importSetlistFromDropbox below.
+ */
+export async function listDropboxSetlistFiles(): Promise<DropboxEntry[]> {
+  const entries = await listDropboxFolder(SETLISTS_FOLDER, ['.csv']);
+  return entries.filter((e) => !e.isFolder);
+}
+
+/**
+ * Pulls one Dropbox CSV into local storage as a real, playable setlist — the
+ * setlist's name comes from the CSV's own filename (reversing
+ * sanitizeSetlistFilename), since the CSV format itself has no separate name
+ * field. Overwrites any existing local setlist of the same name, same as
+ * saving an edit would (see saveSetlist above).
+ */
+export async function importSetlistFromDropbox(entry: DropboxEntry): Promise<Setlist> {
+  const csv = await downloadDropboxFile(entry.path);
+  const setlist: Setlist = {
+    name: setlistNameFromFilename(entry.name),
+    entries: parseSetlistCsv(csv),
+  };
+  await saveSetlist(setlist);
+  return setlist;
 }

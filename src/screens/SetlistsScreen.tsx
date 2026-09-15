@@ -110,6 +110,15 @@ export function SetlistsScreen({ navigation }: Props) {
         <Text style={styles.newButtonText}>{strings.setlists.newSetlistLabel}</Text>
       </Pressable>
 
+      <Pressable
+        style={styles.importButton}
+        onPress={() => navigation.navigate('ImportSetlist')}
+        accessibilityRole="button"
+        accessibilityLabel={strings.setlists.importFromDropboxLabel}
+      >
+        <Text style={styles.importButtonText}>{strings.setlists.importFromDropboxLabel}</Text>
+      </Pressable>
+
       {isLoadingOne && <ActivityIndicator color="#fff" style={styles.spinner} />}
       {error && <Text style={styles.errorText}>{error}</Text>}
 
@@ -218,6 +227,18 @@ const styles = StyleSheet.create({
   },
   newButtonText: {
     color: '#fff',
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  importButton: {
+    backgroundColor: '#1c1c1c',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  importButtonText: {
+    color: '#4f8cff',
     fontSize: 16,
     fontWeight: '700',
   },

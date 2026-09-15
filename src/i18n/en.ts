@@ -36,7 +36,7 @@ export const en = {
     dropboxButtonLabel: 'Dropbox',
     setlistsButtonLabel: 'Setlists',
     addSongButtonLabel: 'Add a Song',
-    findSongButtonLabel: 'Search for a Song: Experimental',
+    searchButtonLabel: 'Search for a Song',
     importingLabel: 'Importing…',
     importFileLabel: 'Import File',
     sortButtonLabel: (mode: string) => `Sort: ${mode}`,
@@ -56,6 +56,7 @@ export const en = {
     sourceLabelPasted: 'Pasted',
     sourceLabelImportedFile: 'Imported file',
     sourceLabelDropbox: 'Dropbox',
+    sourceLabelSearch: 'Search',
     sourceLabelDemoSong: 'Demo song',
     removeSongAlertTitle: 'Remove song',
     removeSongAlertMessage: (title: string) => `Remove "${title}" from your library?`,
@@ -80,28 +81,22 @@ export const en = {
     loadSongLabel: 'Load Song',
   },
 
-  findSong: {
+  search: {
     searchFailedTitle: 'Search failed',
     backButtonLabel: 'Back',
-    heading: 'Search for a Song',
+    heading: 'Search',
     notConfiguredText:
-      "Song search isn't set up yet. It needs a backend server, which hasn't been connected to this build of the app.",
-    experimentalNoticeText:
-      "Experimental: this searches the web for lyrics but may not always find a complete result. If the result pasted in the next screen is incomplete or has a problem, tap cancel. You can paste the correct lyrics in yourself instead.",
-    titleLabel: 'Title',
-    titlePlaceholder: 'Song title',
-    artistLabel: 'Artist (optional, but helps)',
-    artistAccessibilityLabel: 'Artist',
-    artistPlaceholder: 'Artist',
-    includeChordsLabel: 'Include chords',
-    includeChordsHint: 'Swipe up to turn on, down to turn off.',
-    includeChordsOnActionLabel: 'Turn on',
-    includeChordsOffActionLabel: 'Turn off',
-    includeChordsStateOnLabel: 'On',
-    includeChordsStateOffLabel: 'Off',
+      "Search isn't set up yet. It needs a backend server, which hasn't been connected to this build of the app.",
+    queryLabel: 'Song title or artist',
+    queryPlaceholder: 'Song title or artist',
     searchingLabel: 'Searching…',
     searchLabel: 'Search',
-    hintText: "You'll get a chance to review the result before it's saved to your library.",
+    noResultsText: 'No matches found.',
+    resultHint: 'Double tap to add this song to your library.',
+    keySuffix: (key: string) => `key ${key}`,
+    emptyResultAlertTitle: 'Nothing to load',
+    emptyResultAlertMessage: (title: string) => `"${title}" doesn't have any lyric lines in it.`,
+    loadFailedAlertTitle: 'Couldn’t load that song',
   },
 
   pedalSettings: {
@@ -250,6 +245,26 @@ export const en = {
     playHint: 'Double tap to play. Swipe up or down to delete.',
     stopFollowingActionLabel: 'Stop Following',
     playingStatusText: (current: number, total: number) => `Playing — song ${current} of ${total}`,
+    importFromDropboxLabel: 'Import from Dropbox',
+  },
+
+  importSetlist: {
+    backButtonLabel: 'Back',
+    heading: 'Import Setlist',
+    explainerText:
+      'These are the setlist CSV files sitting in your Dropbox /setlists folder — including any built by another tool, like a web setlist builder. Tap one to bring it into your library here.',
+    notConfiguredInfoText1:
+      "Dropbox isn't set up yet. To enable it, create an app at dropbox.com/developers/apps, add the files.metadata.read and files.content.read permissions, add this redirect URI under OAuth 2:",
+    notConfiguredInfoText2: "Then give me the app key and I'll wire it in.",
+    connectDropboxLabel: 'Connect Dropbox',
+    emptyText: "No setlist files found in Dropbox's /setlists folder.",
+    entryAccessibilityLabel: (name: string) => `${name}, setlist`,
+    entryHint: 'Double tap to import.',
+    couldntConnectAlertTitle: 'Couldn’t connect to Dropbox',
+    importedAlertTitle: 'Setlist imported',
+    importedAlertMessage: (name: string, count: number) =>
+      `"${name}" is now in your Setlists list, with ${count} song${count === 1 ? '' : 's'}.`,
+    importFailedAlertTitle: 'Import failed',
   },
 
   setlistCreator: {

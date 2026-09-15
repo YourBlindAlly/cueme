@@ -1,18 +1,15 @@
-CueMe song-search backend — one-time setup
-Written 2026-09-01, updated 2026-09-02 (dropped Brave Search — see below).
-This is the only thing left before "Find a Song" works in the app.
-Everything else (code, tests, GitHub Actions deploy workflow) is already
-built and committed.
+LyriCue song-search backend — one-time setup
+Written 2026-09-01, rewritten 2026-09-15 when this backend was switched
+from AI web search to a search over the curated community song library.
 
 WHAT THIS IS
-A small Cloudflare Worker (backend/ in this repo) that takes a song
-title/artist from the app and asks an AI to search the real web, read a
-real page, and pull out clean lyrics (and chords, if asked for) — not
-recite from its own memory of the song. It's built provider-agnostic — you
-can point it at Gemini, Claude (Anthropic), or OpenAI just by changing
-which secret is set, no code change. Each of those providers does its own
-real web search and page-reading as part of one call, so there's no
-separate search API to sign up for.
+A small Cloudflare Worker (backend/ in this repo) that the app's Search
+screen calls. It searches a shared community Dropbox account (a separate
+account from Rusty's own personal one, holding a curated ~7,800-song
+ChordPro library — see "chordpro songs/project notes.txt" Step 10 in the
+LyriCue - audio prompter folder) and returns matching songs, then serves
+up the actual file content when one is picked. The app's UI never mentions
+Dropbox anywhere — it's just called "Search."
 
 WHAT YOU NEED, AND WHERE TO GET EACH ONE
 
@@ -22,24 +19,23 @@ WHAT YOU NEED, AND WHERE TO GET EACH ONE
    Also grab your Account ID — it's shown on the right-hand side of the
    main Cloudflare dashboard.
 
-2. An API key from whichever AI provider you want to use for the
-   extraction step. Pick ONE to start (you can add the others later,
-   or switch, without touching any code):
-     Gemini:    https://aistudio.google.com/ — cheapest option researched
-                so far, this is the one the code defaults to if you don't
-                set AI_PROVIDER at all.
-     Anthropic: https://console.anthropic.com/
-     OpenAI:    https://platform.openai.com/
+2. A long-lived Dropbox refresh token for the community library account.
+   Log into that Dropbox account (rusty@yourblindally.com) in a private
+   browser window, then visit lyricue.net/reveal-token.html and connect —
+   it'll show a refresh token, copy it. Disconnect right after, since that
+   same page's Dropbox connection is shared with the Lyric Editor and
+   Setlist Builder web tools.
 
 3. A shared secret you make up yourself — any random string of letters and
    numbers works, it just has to match in two places (step 5 below). This
-   is what stops a stranger who somehow finds the Worker's URL from running
-   up your AI bill; it is not real per-user login, just a basic lock.
+   is what stops a stranger who somehow finds the Worker's URL from
+   running searches against the community library through your account;
+   it is not real per-user login, just a basic lock.
 
 WHERE EACH VALUE GOES
 
-4. In this GitHub repo (YourBlindAlly/cueme): Settings > Secrets and
-   variables > Actions > New repository secret. Add two:
+4. In this GitHub repo: Settings > Secrets and variables > Actions > New
+   repository secret. Add two:
      CLOUDFLARE_API_TOKEN    (from step 1)
      CLOUDFLARE_ACCOUNT_ID   (from step 1)
    Once these exist, push to master (or run the "Deploy song-search
@@ -49,15 +45,14 @@ WHERE EACH VALUE GOES
 5. After that first deploy, go to the Cloudflare dashboard > Workers &
    Pages > cueme-song-search > Settings > Variables and Secrets, and add
    these as Secrets (not plain variables, since these are all sensitive):
-     APP_SHARED_SECRET   your made-up string from step 3
-     AI_PROVIDER          "gemini", "anthropic", or "openai" — whichever
-                          you got a key for in step 2 (defaults to gemini
-                          if you skip this)
-     GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY
-                          only the one matching AI_PROVIDER is required
+     APP_SHARED_SECRET                your made-up string from step 3
+     COMMUNITY_DROPBOX_REFRESH_TOKEN  the token from step 2
 
 6. Same place as step 4 (GitHub repo Settings > Secrets and variables >
-   Actions), add two more repository secrets:
+   Actions), add two more repository secrets — these names are unchanged
+   from the earlier AI-search version of this backend, they mean the same
+   thing (a backend URL and a matching shared secret), just kept as-is to
+   avoid re-touching GitHub settings:
      AI_SEARCH_BACKEND_URL — the Worker's address plus "/search". You'll
        find the base address on the Worker's own page in the Cloudflare
        dashboard, right under its name — something like
@@ -65,43 +60,32 @@ WHERE EACH VALUE GOES
        "/search" to the end.
      AI_SEARCH_APP_SECRET — must be typed exactly the same as
        APP_SHARED_SECRET from step 5.
-   These are NOT put directly into cueme-app/src/aiSearch/config.ts, on
-   purpose — this repo is public, and a real secret committed there would
-   be readable by anyone on GitHub. The build workflow writes them into
-   that file at build time, straight into the CI runner's copy, never into
-   git history — see the "Inject AI search backend config" step in
-   .github/workflows/build-unsigned-ipa.yml. Once these two secrets exist,
-   push (or re-run the build workflow) and the next build will have Find a
-   Song working. Until they're set, the Find a Song screen just shows a
-   friendly "not set up yet" message instead of trying to call anything.
+   These are NOT put directly into src/search/config.ts, on purpose — this
+   repo is public, and a real secret committed there would be readable by
+   anyone on GitHub. The build workflow writes them into that file at
+   build time, straight into the CI runner's copy, never into git history
+   — see the "Inject search backend config" step in each build workflow.
+   Until these two secrets exist, the Search screen just shows a friendly
+   "not set up yet" message instead of trying to call anything.
 
 TRYING IT
-Once all of the above is done: open the app, Library > Find a Song, type a
-title (artist optional but helps), choose whether you want chords, tap
-Search. If it can't find a confident match it says so rather than guessing
-— that's deliberate, not a bug. Whatever it finds lands on the normal
-paste/review screen, same as any other import, so nothing saves to your
-library until you tap Save.
+Once all of the above is done: open the app, Library > Search, type a
+title or artist, tap Search. Tapping a result downloads it straight into
+your library, same as picking a song from your own Dropbox browse screen
+— nothing else to confirm, since these are real curated files, not
+AI-generated ones that might need review.
 
-CHANGE, 2026-09-02: BRAVE SEARCH DROPPED
-The first version of this backend called Brave Search separately, then fed
-just the short result snippets to a plain text-only AI call. That's a real
-accuracy problem — a snippet is one or two sentences, nowhere near enough
-to contain real lyrics, so the AI was almost certainly reciting from its
-own memory of the song rather than reading anything real. Rebuilt to use
-each provider's own web-search-enabled mode (Gemini's Grounding with
-Google Search, Anthropic's web_search tool, OpenAI's web_search tool),
-which actually searches and reads a real page as part of one call, and the
-prompt now explicitly tells it not to guess from memory. If you already
-set up a Brave account for this, it's simply not used anymore — nothing to
-undo, the code just doesn't call it. Everything else you set up (Cloudflare
-token/account ID, the AI provider key, your made-up shared secret) is
-unchanged and still exactly what's needed.
-
-WHAT THIS DOESN'T DO YET, ON PURPOSE
-No payment/credit gating — this is built for your own personal use first,
-per the plan already agreed on. No shared cache across other people, ever
-— every search only ever writes into the searching device's own library,
-matching the copyright/legal decision already made for this feature. Only
-search-metadata (title, artist, success, timing) gets logged, in the
-Worker's own Cloudflare logs — never the actual lyrics/chords text.
+HISTORY: WHAT THIS REPLACED, 2026-09-15
+The original version of this backend asked an AI provider (Gemini,
+Anthropic, or OpenAI, picked via an AI_PROVIDER secret) to search the open
+web and extract lyrics/chords from whatever page it found. Real-world
+testing found its success rate genuinely low even after several rounds of
+fixes (a two-call search-then-extract split, a mechanical completeness
+gate, domain-blocking known-bad sources) — see git history on this file
+and on backend/src/index.ts for that whole story if it's ever worth
+revisiting. Replaced outright with the community library search above,
+which is both more reliable (it's real curated content, not scraped) and
+doesn't carry the same copyright-sourcing concerns. If the AI_PROVIDER /
+GEMINI_API_KEY / ANTHROPIC_API_KEY / OPENAI_API_KEY secrets are still set
+on the Worker from the old setup, they're simply unused now — safe to
+remove from the Cloudflare dashboard whenever, nothing depends on them.

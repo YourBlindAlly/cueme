@@ -38,7 +38,7 @@ export const uk: Strings = {
     dropboxButtonLabel: 'Dropbox',
     setlistsButtonLabel: 'Сетлисти',
     addSongButtonLabel: 'Додати пісню',
-    findSongButtonLabel: 'Пошук пісні: Експериментально',
+    searchButtonLabel: 'Пошук пісні',
     importingLabel: 'Імпортування…',
     importFileLabel: 'Імпортувати файл',
     sortButtonLabel: (mode: string) => `Сортування: ${mode}`,
@@ -58,6 +58,7 @@ export const uk: Strings = {
     sourceLabelPasted: 'Вставлено',
     sourceLabelImportedFile: 'Імпортований файл',
     sourceLabelDropbox: 'Dropbox',
+    sourceLabelSearch: 'Пошук',
     sourceLabelDemoSong: 'Демо-пісня',
     removeSongAlertTitle: 'Видалити пісню',
     removeSongAlertMessage: (title: string) => `Видалити «${title}» з вашої бібліотеки?`,
@@ -82,28 +83,22 @@ export const uk: Strings = {
     loadSongLabel: 'Завантажити пісню',
   },
 
-  findSong: {
+  search: {
     searchFailedTitle: 'Помилка пошуку',
     backButtonLabel: 'Назад',
-    heading: 'Пошук пісні',
+    heading: 'Пошук',
     notConfiguredText:
-      'Пошук пісень ще не налаштовано. Для цього потрібен серверний бекенд, який ще не підключено до цієї збірки додатка.',
-    experimentalNoticeText:
-      'Експериментально: цей пошук шукає текст пісні в інтернеті, але не завжди знаходить повний результат. Якщо результат, вставлений на наступному екрані, неповний або має проблему, натисніть «Скасувати». Ви завжди можете вставити правильний текст самостійно.',
-    titleLabel: 'Назва',
-    titlePlaceholder: 'Назва пісні',
-    artistLabel: 'Виконавець (необов’язково, але допомагає)',
-    artistAccessibilityLabel: 'Виконавець',
-    artistPlaceholder: 'Виконавець',
-    includeChordsLabel: 'Включити акорди',
-    includeChordsHint: 'Проведіть вгору, щоб увімкнути, вниз — щоб вимкнути.',
-    includeChordsOnActionLabel: 'Увімкнути',
-    includeChordsOffActionLabel: 'Вимкнути',
-    includeChordsStateOnLabel: 'Увімкнено',
-    includeChordsStateOffLabel: 'Вимкнено',
+      'Пошук ще не налаштовано. Для цього потрібен серверний бекенд, який ще не підключено до цієї збірки додатка.',
+    queryLabel: 'Назва пісні або виконавець',
+    queryPlaceholder: 'Назва пісні або виконавець',
     searchingLabel: 'Пошук…',
     searchLabel: 'Пошук',
-    hintText: 'Ви зможете переглянути результат, перш ніж він буде збережений у вашій бібліотеці.',
+    noResultsText: 'Нічого не знайдено.',
+    resultHint: 'Двічі торкніться, щоб додати цю пісню до бібліотеки.',
+    keySuffix: (key: string) => `тональність ${key}`,
+    emptyResultAlertTitle: 'Нема чого завантажувати',
+    emptyResultAlertMessage: (title: string) => `У файлі «${title}» немає жодного рядка тексту.`,
+    loadFailedAlertTitle: 'Не вдалося завантажити пісню',
   },
 
   pedalSettings: {
@@ -255,6 +250,26 @@ export const uk: Strings = {
     playHint: 'Двічі торкніться, щоб відтворити. Проведіть вгору або вниз, щоб видалити.',
     stopFollowingActionLabel: 'Припинити слідування',
     playingStatusText: (current: number, total: number) => `Відтворюється — пісня ${current} з ${total}`,
+    importFromDropboxLabel: 'Імпортувати з Dropbox',
+  },
+
+  importSetlist: {
+    backButtonLabel: 'Назад',
+    heading: 'Імпорт сетлиста',
+    explainerText:
+      'Це файли CSV сетлистів у вашій папці /setlists на Dropbox — включно з будь-якими, створеними іншим інструментом, наприклад веб-конструктором сетлистів. Торкніться, щоб додати його до бібліотеки тут.',
+    notConfiguredInfoText1:
+      'Dropbox ще не налаштовано. Щоб увімкнути його, створіть додаток на dropbox.com/developers/apps, додайте дозволи files.metadata.read і files.content.read, додайте цей redirect URI в розділі OAuth 2:',
+    notConfiguredInfoText2: 'Потім дайте мені ключ додатка, і я його підключу.',
+    connectDropboxLabel: 'Підключити Dropbox',
+    emptyText: 'У папці /setlists на Dropbox не знайдено файлів сетлистів.',
+    entryAccessibilityLabel: (name: string) => `${name}, сетлист`,
+    entryHint: 'Двічі торкніться, щоб імпортувати.',
+    couldntConnectAlertTitle: 'Не вдалося підключитися до Dropbox',
+    importedAlertTitle: 'Сетлист імпортовано',
+    importedAlertMessage: (name: string, count: number) =>
+      `«${name}» тепер у вашому списку сетлистів. Пісень: ${count}.`,
+    importFailedAlertTitle: 'Помилка імпорту',
   },
 
   setlistCreator: {
